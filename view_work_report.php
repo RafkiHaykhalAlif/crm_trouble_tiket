@@ -28,6 +28,7 @@ $sql_wo_report = "SELECT
     wo.pre_work_notes,
     t.id as ticket_id,
     t.ticket_code,
+    t.jenis_tiket,
     t.title as ticket_title,
     t.description as ticket_description,
     t.status as ticket_status,
@@ -35,20 +36,21 @@ $sql_wo_report = "SELECT
     c.customer_id_number,
     c.full_name as customer_name,
     c.address as customer_address,
+    c.provinsi as customer_provinsi,
+    c.kota as customer_kota,
     c.phone_number as customer_phone,
     c.email as customer_email,
     u_creator.full_name as created_by_name,
     u_vendor.full_name as technician_name,
     u_vendor.id as technician_id,
     wr.equipment_replaced,
+    wr.equipment_removed,
     wr.cables_replaced,
     wr.new_installations,
     wr.signal_before,
     wr.signal_after,
     wr.speed_test_result,
     wr.materials_used,
-    wr.customer_satisfaction,
-    wr.customer_notes,
     wr.created_at as report_created
 FROM tr_work_orders wo
 JOIN tr_tickets t ON wo.ticket_id = t.id
@@ -69,6 +71,7 @@ $wo = mysqli_fetch_assoc($result_wo);
 
 // Parse JSON data
 $equipment_data = $wo['equipment_replaced'] ? json_decode($wo['equipment_replaced'], true) : null;
+$equipment_removed = $wo['equipment_removed'] ?? null;
 $materials_data = $wo['materials_used'] ? json_decode($wo['materials_used'], true) : null;
 
 // Fungsi helper untuk format tanggal Indonesia
@@ -115,7 +118,7 @@ function formatDuration($minutes) {
 
     <header class="main-header">
         <div class="container">
-            <h1>📋 Laporan Work Order Detail</h1>
+            <h1>Laporan Work Order Detail</h1>
             <div class="user-info">
                 <span>Selamat datang, <strong><?php echo htmlspecialchars($_SESSION['user_full_name']); ?></strong>!</span>
                 <span class="user-role <?php echo $_SESSION['user_role'] === 'Dispatch' ? 'user-role-dispatch' : ($_SESSION['user_role'] === 'BOR' ? 'user-role-bor' : ''); ?>">
@@ -142,259 +145,169 @@ function formatDuration($minutes) {
             <a href="view_work_order.php?id=<?php echo $wo['id']; ?>" class="btn-back" style="background-color: #6c757d; margin-left: 10px;">👁 View WO Basic</a>
         </div>
 
-        <!-- Header Info WO -->
-        <div class="card report-header">
-            <div class="report-title">
-                <h2>🛠️ <?php echo htmlspecialchars($wo['wo_code']); ?></h2>
-                <div class="status-badges">
-                    <?php 
-                    $wo_status_color = '';
-                    switch($wo['wo_status']) {
-                        case 'Pending': $wo_status_color = 'background-color: #ffc107; color: #212529;'; break;
-                        case 'Scheduled': $wo_status_color = 'background-color: #17a2b8; color: white;'; break;
-                        case 'In Progress': $wo_status_color = 'background-color: #fd7e14; color: white;'; break;
-                        case 'Completed': $wo_status_color = 'background-color: #28a745; color: white;'; break;
-                        case 'Cancelled': $wo_status_color = 'background-color: #dc3545; color: white;'; break;
-                        default: $wo_status_color = 'background-color: #6c757d; color: white;';
-                    }
-                    ?>
-                    <span class="status" style="<?php echo $wo_status_color; ?>">
-                        <?php echo htmlspecialchars($wo['wo_status']); ?>
-                    </span>
+        <?php
+            $allowed_statuses = [
+                'Completed',
+                'Completed by Technician',
+                'Closed',
+                'Closed by BOR',
+                'Waiting For BOR Review'
+            ];
+            if (!in_array($wo['wo_status'], $allowed_statuses) || empty($wo['visit_report'])):
+            ?>
+            <div class="report-grid">
+                <div class="card">
+                    <div style="text-align: center; padding: 40px;">
+                        <div style="font-size: 48px; margin-bottom: 10px;">⏳</div>
+                        <h4>Work Order Belum Selesai</h4>
+                        <p>Laporan detail akan tersedia setelah teknisi menyelesaikan pekerjaan.</p>
+                        <p><strong>Status saat ini:</strong> <?php echo htmlspecialchars($wo['wo_status']); ?></p>
+                    </div>
                 </div>
             </div>
-            
-            <div class="report-summary">
-                <div class="summary-item">
-                    <label>Ticket:</label>
-                    <span><?php echo htmlspecialchars($wo['ticket_code']); ?></span>
-                </div>
-                <div class="summary-item">
-                    <label>Customer:</label>
-                    <span><?php echo htmlspecialchars($wo['customer_name']); ?></span>
-                </div>
-                <div class="summary-item">
-                    <label>Teknisi:</label>
-                    <span><?php echo htmlspecialchars($wo['technician_name']); ?></span>
-                </div>
-                <div class="summary-item">
-                    <label>Tanggal Laporan:</label>
-                    <span><?php echo $wo['report_created'] ? formatTanggalIndonesia($wo['report_created']) : '-'; ?></span>
-                </div>
+            <?php endif; ?>
+
+        <!-- Surat Laporan Pekerjaan Work Order -->
+        <div class="wo-letter">
+            <div class="wo-letter-header">
+                <h2 style="margin:0;">LAPORAN PEKERJAAN WO</h2>
+                <div>No. WO: <strong><?php echo htmlspecialchars($wo['wo_code']); ?></strong></div>
+                <div>Jenis Work Order: <strong><?php echo htmlspecialchars($wo['jenis_tiket']); ?></strong></div>
+                <div>Tanggal: <strong><?php echo $wo['report_created'] ? formatTanggalIndonesia($wo['report_created']) : '-'; ?></strong></div>
             </div>
-        </div>
+            <div class="wo-letter-body">
+                <p>Kepada Yth,</p>
+                <p>Customer: <strong><?php echo htmlspecialchars($wo['customer_name']); ?></strong></p>
+                <p>Alamat: <?php echo htmlspecialchars($wo['customer_address']); ?></p>
+                <p>Provinsi: <?php echo htmlspecialchars($wo['customer_provinsi']); ?></p>
+                <p>Kabupaten/Kota: <?php echo htmlspecialchars($wo['customer_kota']); ?></p>
+                <p>Telepon: <?php echo htmlspecialchars($wo['customer_phone']); ?></p>
+                <p>Email: <?php echo htmlspecialchars($wo['customer_email']); ?></p>
+                <br>
+                <p>Dengan ini kami menyampaikan bahwa pekerjaan dengan rincian sebagai berikut telah selesai dilaksanakan:</p>
+                <table class="wo-letter-table">
+                    <tr>
+                        <td><b>Jenis Work Order</b></td>
+                        <td>: <?php echo htmlspecialchars($wo['jenis_tiket']); ?></td>
+                    </tr>
+                    <tr>
+                        <td><b>Masalah</b></td>
+                        <td>: <?php echo htmlspecialchars($wo['ticket_title']); ?></td>
+                    </tr>
+                    <tr>
+                        <td><b>Deskripsi Pekerjaan</b></td>
+                        <td>: <?php echo nl2br(htmlspecialchars($wo['visit_report'])); ?></td>
+                    </tr>
+                    <tr>
+                        <td><b>Waktu Mulai</b></td>
+                        <td>: <?php echo $wo['started_at'] ? formatTanggalIndonesia($wo['started_at']) : '-'; ?></td>
+                    </tr>
+                    <tr>
+                        <td><b>Waktu Selesai</b></td>
+                        <td>: <?php echo $wo['report_created'] ? formatTanggalIndonesia($wo['report_created']) : '-'; ?></td>
+                    </tr>
+                    <tr>
+                        <td><b>Estimasi Durasi</b></td>
+                        <td>: <?php echo formatDuration($wo['estimated_duration']); ?></td>
+                    </tr>
+                    <tr>
+                        <td><b>Durasi Aktual</b></td>
+                        <td>: <?php echo formatDuration($wo['actual_duration']); ?></td>
+                    </tr>
+                    <tr>
+                        <td><b>Teknisi</b></td>
+                        <td>: <?php echo htmlspecialchars($wo['technician_name']); ?></td>
+                    </tr>
+                </table>
+                <br>
 
-        <?php if ($wo['wo_status'] == 'Completed' && $wo['report_created']): ?>
-        
-        <div class="report-grid">
-            
-            <!-- Work Summary -->
-            <div class="report-section">
-                <section class="card">
-                    <h3>📋 Ringkasan Pekerjaan</h3>
-                    
-                    <div class="info-row">
-                        <label>Masalah:</label>
-                        <span><?php echo htmlspecialchars($wo['ticket_title']); ?></span>
-                    </div>
-                    
-                    <div class="info-row">
-                        <label>Deskripsi Pekerjaan:</label>
-                        <div class="description-box">
-                            <?php echo nl2br(htmlspecialchars($wo['visit_report'])); ?>
-                        </div>
-                    </div>
-
-                    <div class="timing-info">
-                        <div class="timing-item">
-                            <label>⏱️ Waktu Mulai:</label>
-                            <span><?php echo $wo['started_at'] ? formatTanggalIndonesia($wo['started_at']) : '-'; ?></span>
-                        </div>
-                        <div class="timing-item">
-                            <label>📅 Waktu Selesai:</label>
-                            <span><?php echo $wo['report_created'] ? formatTanggalIndonesia($wo['report_created']) : '-'; ?></span>
-                        </div>
-                        <div class="timing-item">
-                            <label>⏳ Estimasi:</label>
-                            <span><?php echo formatDuration($wo['estimated_duration']); ?></span>
-                        </div>
-                        <div class="timing-item">
-                            <label>✅ Aktual:</label>
-                            <span style="font-weight: 600; color: <?php echo ($wo['actual_duration'] <= $wo['estimated_duration']) ? '#28a745' : '#dc3545'; ?>;">
-                                <?php echo formatDuration($wo['actual_duration']); ?>
-                            </span>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Equipment & Technical -->
-            <div class="report-section">
-                <section class="card">
-                    <h3>🔧 Pergantian Equipment</h3>
-                    
-                    <?php if ($equipment_data): ?>
-                        <?php if (!empty($equipment_data['equipment_replaced'])): ?>
-                        <div class="equipment-item">
-                            <h4>📟 Equipment Diganti:</h4>
-                            <div class="equipment-details">
-                                <?php echo nl2br(htmlspecialchars($equipment_data['equipment_replaced'])); ?>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-
-                        <?php if (!empty($equipment_data['cables_replaced'])): ?>
-                        <div class="equipment-item">
-                            <h4>🔌 Kabel Diganti:</h4>
-                            <div class="equipment-details">
-                                <?php echo nl2br(htmlspecialchars($equipment_data['cables_replaced'])); ?>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-
-                        <?php if (!empty($equipment_data['new_installations'])): ?>
-                        <div class="equipment-item">
-                            <h4>🆕 Instalasi Baru:</h4>
-                            <div class="equipment-details">
-                                <?php echo nl2br(htmlspecialchars($equipment_data['new_installations'])); ?>
-                            </div>
-                        </div>
-                        <?php endif; ?>
-                    <?php else: ?>
-                        <p class="no-data">Tidak ada pergantian equipment yang dilaporkan.</p>
+                <b>Pergantian Equipment:</b>
+                <ul>
+                    <?php if ($equipment_data && !empty($equipment_data['equipment_replaced'])): ?>
+                        <li>Equipment Diganti: <?php echo nl2br(htmlspecialchars($equipment_data['equipment_replaced'])); ?></li>
                     <?php endif; ?>
-                </section>
-            </div>
-
-            <!-- Technical Measurements -->
-            <div class="report-section">
-                <section class="card">
-                    <h3>📊 Pengukuran Teknis</h3>
-                    
-                    <div class="measurements-grid">
-                        <div class="measurement-item">
-                            <label>Signal Sebelum:</label>
-                            <span class="measurement-value">
-                                <?php echo $wo['signal_before'] ? htmlspecialchars($wo['signal_before']) : '-'; ?>
-                            </span>
-                        </div>
-                        <div class="measurement-item">
-                            <label>Signal Sesudah:</label>
-                            <span class="measurement-value" style="color: #28a745; font-weight: 600;">
-                                <?php echo $wo['signal_after'] ? htmlspecialchars($wo['signal_after']) : '-'; ?>
-                            </span>
-                        </div>
-                        <div class="measurement-item full-width">
-                            <label>Speed Test Result:</label>
-                            <span class="measurement-value">
-                                <?php echo $wo['speed_test_result'] ? htmlspecialchars($wo['speed_test_result']) : '-'; ?>
-                            </span>
-                        </div>
-                    </div>
-                </section>
-            </div>
-
-            <!-- Materials Used -->
-            <div class="report-section">
-                <section class="card">
-                    <h3>📦 Material yang Digunakan</h3>
-                    
-                    <?php if ($materials_data && !empty($materials_data)): ?>
-                        <div class="materials-table">
-                            <table class="ticket-table">
-                                <thead>
-                                    <tr>
-                                        <th>Material</th>
-                                        <th>Qty</th>
-                                        <th>Unit</th>
-                                        <th>Catatan</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($materials_data as $material): ?>
-                                        <tr>
-                                            <td><?php echo htmlspecialchars($material['name']); ?></td>
-                                            <td><?php echo htmlspecialchars($material['quantity']); ?></td>
-                                            <td><?php echo htmlspecialchars($material['unit']); ?></td>
-                                            <td><?php echo htmlspecialchars($material['notes']); ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    <?php else: ?>
-                        <p class="no-data">Tidak ada material yang dilaporkan digunakan.</p>
+                    <?php if ($equipment_data && !empty($equipment_data['cables_replaced'])): ?>
+                        <li>Kabel Diganti: <?php echo nl2br(htmlspecialchars($equipment_data['cables_replaced'])); ?></li>
                     <?php endif; ?>
-                </section>
-            </div>
+                    <?php if ($equipment_data && !empty($equipment_data['new_installations'])): ?>
+                        <li>Instalasi Baru: <?php echo nl2br(htmlspecialchars($equipment_data['new_installations'])); ?></li>
+                    <?php endif; ?>
+                    <?php if (!$equipment_data || (empty($equipment_data['equipment_replaced']) && empty($equipment_data['cables_replaced']) && empty($equipment_data['new_installations']))): ?>
+                        <li>Tidak ada pergantian equipment yang dilaporkan.</li>
+                    <?php endif; ?>
+                </ul>
 
-            <!-- Customer Feedback -->
-            <div class="report-section">
-                <section class="card">
-                    <h3>👤 Feedback Customer</h3>
-                    
-                    <?php if ($wo['customer_satisfaction']): ?>
-                        <div class="satisfaction-badge">
-                            <?php
-                            $satisfaction_icon = '';
-                            $satisfaction_color = '';
-                            switch($wo['customer_satisfaction']) {
-                                case 'Very Satisfied': 
-                                    $satisfaction_icon = '😊'; 
-                                    $satisfaction_color = '#28a745'; 
-                                    break;
-                                case 'Satisfied': 
-                                    $satisfaction_icon = '🙂'; 
-                                    $satisfaction_color = '#28a745'; 
-                                    break;
-                                case 'Neutral': 
-                                    $satisfaction_icon = '😐'; 
-                                    $satisfaction_color = '#ffc107'; 
-                                    break;
-                                case 'Unsatisfied': 
-                                    $satisfaction_icon = '😞'; 
-                                    $satisfaction_color = '#dc3545'; 
-                                    break;
+                <b>Pencabutan Equipment:</b>
+                <ul>
+                    <li>
+                        Equipment Dicabut: 
+                        <?php
+                            if ($equipment_removed && trim($equipment_removed) !== '') {
+                                echo nl2br(htmlspecialchars($equipment_removed));
+                            } else {
+                                echo '-';
                             }
-                            ?>
-                            <span style="color: <?php echo $satisfaction_color; ?>; font-size: 1.2em; font-weight: 600;">
-                                <?php echo $satisfaction_icon; ?> <?php echo htmlspecialchars($wo['customer_satisfaction']); ?>
-                            </span>
-                        </div>
-                    <?php endif; ?>
-                    
-                    <?php if ($wo['customer_notes']): ?>
-                        <div class="customer-notes">
-                            <h4>💬 Catatan Customer:</h4>
-                            <div class="description-box">
-                                <?php echo nl2br(htmlspecialchars($wo['customer_notes'])); ?>
-                            </div>
-                        </div>
-                    <?php else: ?>
-                        <p class="no-data">Tidak ada catatan khusus dari customer.</p>
-                    <?php endif; ?>
-                </section>
+                        ?>
+                    </li>
+                </ul>
+
+                <b>Pengukuran Teknis:</b>
+                <ul>
+                    <li>Signal Sebelum: <?php echo $wo['signal_before'] ? htmlspecialchars($wo['signal_before']) : '-'; ?></li>
+                    <li>Signal Sesudah: <?php echo $wo['signal_after'] ? htmlspecialchars($wo['signal_after']) : '-'; ?></li>
+                    <li>Speed Test Result: <?php echo $wo['speed_test_result'] ? htmlspecialchars($wo['speed_test_result']) : '-'; ?></li>
+                </ul>
+
+                <b>Material yang Digunakan:</b>
+                <?php if ($materials_data && !empty($materials_data)): ?>
+                    <table class="wo-letter-table" style="margin-top:8px;">
+                        <tr>
+                            <th>Material</th>
+                            <th>Qty</th>
+                            <th>Unit</th>
+                            <th>Catatan</th>
+                        </tr>
+                        <?php foreach ($materials_data as $material): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($material['name']); ?></td>
+                            <td><?php echo htmlspecialchars($material['quantity']); ?></td>
+                            <td><?php echo htmlspecialchars($material['unit']); ?></td>
+                            <td><?php echo htmlspecialchars($material['notes']); ?></td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </table>
+                <?php else: ?>
+                    <ul><li>Tidak ada material yang dilaporkan digunakan.</li></ul>
+                <?php endif; ?>
+
+                <br>
+                <p>Demikian surat laporan ini dibuat sebagai bukti pekerjaan telah selesai dilaksanakan dengan baik.</p>
+                <br>
+                <div class="wo-letter-sign">
+                    <div>
+                        <b>Teknisi</b><br>
+                        <br><br>
+                        <u><?php echo htmlspecialchars($wo['technician_name']); ?></u>
+                    </div>
+                    <div>
+                        <b>Customer</b><br>
+                        <br><br>
+                        <u><?php echo htmlspecialchars($wo['customer_name']); ?></u>
+                    </div>
+                </div>
             </div>
-
         </div>
-
-        <?php else: ?>
-        
-        <!-- WO belum completed -->
-        <div class="card">
-            <div style="text-align: center; padding: 40px;">
-                <div style="font-size: 48px; margin-bottom: 10px;">⏳</div>
-                <h4>Work Order Belum Selesai</h4>
-                <p>Laporan detail akan tersedia setelah teknisi menyelesaikan pekerjaan.</p>
-                <p><strong>Status saat ini:</strong> <?php echo htmlspecialchars($wo['wo_status']); ?></p>
-            </div>
-        </div>
-
-        <?php endif; ?>
 
     </main>
 
     <style>
+    body {
+    background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    }
+    
     .user-role-dispatch {
         background-color: #17a2b8 !important;
     }
@@ -403,56 +316,10 @@ function formatDuration($minutes) {
         background-color: #fd7e14 !important;
     }
 
-    .report-header {
-        margin-bottom: 30px;
-    }
-
-    .report-title {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
-        padding-bottom: 15px;
-        border-bottom: 2px solid #e9ecef;
-    }
-
-    .report-title h2 {
-        margin: 0;
-        color: #495057;
-    }
-
     .status-badges {
         display: flex;
         gap: 10px;
-    }
-
-    .report-summary {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-    }
-
-    .summary-item {
-        display: flex;
-        flex-direction: column;
-        gap: 5px;
-    }
-
-    .summary-item label {
-        font-weight: 600;
-        color: #6c757d;
-        font-size: 14px;
-    }
-
-    .summary-item span {
-        font-weight: 500;
-        color: #495057;
-    }
-
-    .report-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-        gap: 20px;
+        font-size: 1rem;
     }
 
     @media (max-width: 992px) {
@@ -578,26 +445,60 @@ function formatDuration($minutes) {
         word-wrap: break-word;
     }
 
-    @media (max-width: 768px) {
-        .report-summary {
-            grid-template-columns: 1fr;
-        }
+    .wo-letter {
+        margin: 36px auto 48px auto;
+        max-width: 1100px;
+        min-width: 0;
+        background: #fff;
+        border: 1.5px solid #1976d2;
+        border-radius: 12px;
+        padding: 48px 60px 40px 60px;
+        box-shadow: 0 4px 24px #1976d233;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        color: #222;
+    }
 
-        .timing-info {
-            grid-template-columns: 1fr;
-        }
+    .wo-letter-header {
+        text-align: center;
+        margin-bottom: 24px;
+    }
 
-        .measurements-grid {
-            grid-template-columns: 1fr;
-        }
+    .wo-letter-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
 
-        .info-row {
+    .wo-letter-table th, .wo-letter-table td {
+        padding: 4px 8px;
+        border: 1px solid #ddd;
+        vertical-align: top;
+        font-size: 14px;
+    }
+
+    .wo-letter-sign {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 40px;
+        gap: 40px;
+    }
+
+    .wo-letter-sign div {
+        text-align: center;
+        width: 40%;
+    }
+
+    @media (max-width: 600px) {
+        .wo-letter {
+            padding: 16px 6vw;
+        }
+        .wo-letter-sign {
             flex-direction: column;
+            gap: 24px;
         }
-
-        .info-row label {
-            min-width: auto;
-            margin-bottom: 5px;
+        .wo-letter-sign div {
+            width: 100%;
         }
     }
     </style>

@@ -951,3 +951,338 @@ legend {
     background-color: #c82333;
     transform: translateX(5px);
 }
+
+/* =================================
+   NEW STATUS STYLING
+   ================================= */
+
+/* New status for Waiting for BOR Review */
+.status.waiting-for-bor-review { 
+    background-color: #ffc107; 
+    color: #212529;
+    animation: blink 2s infinite;
+}
+
+@keyframes blink {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* BOR Dashboard specific styling */
+.stat-review {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    position: relative;
+}
+
+.stat-review::after {
+    content: '!';
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    color: rgba(255,255,255,0.8);
+    animation: pulse-icon 2s infinite;
+}
+
+@keyframes pulse-icon {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+}
+
+/* Alert box for urgent notifications */
+.alert-box {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-left: 4px solid #ffc107;
+    border-radius: 6px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.alert-box h4 {
+    margin-top: 0;
+    color: #856404;
+    font-size: 1rem;
+}
+
+.alert-box p {
+    margin: 8px 0;
+    color: #856404;
+    font-size: 14px;
+}
+
+/* Review action buttons */
+.btn-review-solved {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-review-solved:hover {
+    background-color: #218838;
+    transform: scale(1.05);
+}
+
+.btn-review-unsolved {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-review-unsolved:hover {
+    background-color: #c82333;
+    transform: scale(1.05);
+}
+
+.btn-report {
+    background-color: #6f42c1;
+    color: white;
+}
+
+.btn-report:hover {
+    background-color: #5a32a3;
+    transform: scale(1.05);
+}
+
+/* Table row highlighting for urgent items */
+tr[data-status="waiting-for-bor-review"] {
+    background-color: #fff8e1 !important;
+    border-left: 4px solid #ffc107;
+}
+
+tr[data-status="waiting-for-bor-review"]:hover {
+    background-color: #fff3c4 !important;
+}
+
+/* =================================
+   Reset & Pengaturan Dasar Body
+   ================================= */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f4f7fa;
+    margin: 0;
+    color: #333;
+}
+
+/* =================================
+   Wadah / Container
+   ================================= */
+.container {
+    width: 90%;
+    max-width: 1600px; /* Lebih lebar untuk dashboard analitik */
+    margin: 0 auto;
+    padding: 20px 0;
+}
+
+/* Wadah khusus untuk form login/register yang sempit */
+.form-container {
+    width: 100%;
+    max-width: 400px;
+    margin: 5% auto;
+    background: #ffffff;
+    padding: 30px 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* =================================
+   Header Utama
+   ================================= */
+.main-header {
+    background-color: #ffffff;
+    padding: 1rem 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    margin-bottom: 2rem;
+}
+.main-header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0;
+}
+.main-header h1 {
+    font-size: 1.5rem;
+    margin: 0;
+    color: #1c3d5a;
+}
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+.user-role {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 15px;
+    color: white;
+}
+.user-role-cc { background-color: #007bff; }
+.user-role-bor { background-color: #fd7e14; }
+.user-role-dispatch { background-color: #17a2b8; }
+.user-role-vendor { background-color: #28a745; }
+.btn-logout {
+    display: inline-block;
+    padding: 8px 15px;
+    background-color: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 5px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+}
+.btn-logout:hover { background-color: #c82333; }
+
+/* =================================
+   Layout & Form Umum
+   ================================= */
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: flex-start;
+}
+.card {
+    background: #ffffff;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.main-action-column .card:not(:last-child) { margin-bottom: 30px; }
+.card h3 {
+    margin-top: 0;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    font-size: 1.2rem;
+}
+fieldset {
+    border: 1px solid #ddd;
+    padding: 20px;
+    border-radius: 5px;
+    margin-bottom: 25px;
+}
+legend {
+    padding: 0 10px;
+    font-weight: 600;
+    color: #007bff;
+}
+.form-group { margin-bottom: 15px; }
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+.form-group input, .form-group textarea, .form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+.btn {
+    display: inline-block;
+    width: 100%;
+    padding: 12px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    text-align: center;
+    font-weight: 600;
+}
+.btn:hover { background-color: #0056b3; }
+
+/* =================================
+   CC Dashboard - Stats Jaringan
+   ================================= */
+.stats-overview {
+    margin-bottom: 30px;
+    padding: 25px;
+    background: #fff;
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+}
+.stats-overview h2 {
+    margin-top: 0;
+    margin-bottom: 25px;
+    text-align: center;
+    font-size: 1.8rem;
+    font-weight: 600;
+    color: #1c3d5a;
+}
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+}
+.kpi-card {
+    padding: 20px;
+    border-radius: 10px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+}
+.kpi-card .kpi-icon {
+    position: absolute;
+    right: 15px;
+    top: 15px;
+    font-size: 3rem;
+    opacity: 0.2;
+}
+.kpi-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+.kpi-label {
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+.kpi-subtext {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+.kpi-outage { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+.kpi-connectivity { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+.kpi-speed { background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%); }
+.kpi-sla { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+
+/* =================================
+   Tabel & Status
+   ================================= */
+.ticket-table { width: 100%; border-collapse: collapse; }
+.ticket-table th, .ticket-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e9e9e9;
+    font-size: 14px;
+}
+.ticket-table th { background-color: #f8f9fa; font-weight: 600; }
+.action-buttons { display: flex; gap: 8px; }
+.btn-action {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+}
+.btn-solve { background-color: #28a745; color: white; }
+.btn-escalate { background-color: #ffc107; color: #212529; }
+.btn-view { background-color: #6c757d; color: white; }
+.status { padding: 4px 12px; border-radius: 15px; color: white; font-size: 12px; font-weight: 500; }
+.status.open { background-color: #28a745; }
+.status.on-progress-customer-care { background-color: #007bff; }
+.status.on-progress-bor { background-color: #fd7e14; }
+.status.waiting-for-dispatch { background-color: #17a2b8; }
+.status.waiting-for-bor-verification { background-color: #6f42c1; }
+.status.closed-solved { background-color: #6c757d; }
+.status.closed-unsolved { background-color: #dc3545; }

@@ -16,31 +16,33 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // Ambil data dari form
 $wo_id = (int)$_POST['wo_id'];
 $location_confirmed = isset($_POST['location_confirmed']) ? 1 : 0;
+$estimated_duration = (int)$_POST['estimated_duration'];
 $pre_work_notes = mysqli_real_escape_string($conn, $_POST['pre_work_notes']);
-$estimated_duration = (int)$_POST['estimated_duration']; // dalam menit
 $vendor_user_id = $_SESSION['user_id'];
 $current_time = date('Y-m-d H:i:s');
 
-// Validasi input
-if (empty($wo_id) || empty($estimated_duration)) {
+// Validasi input wajib
+if (empty($wo_id) || !$location_confirmed || empty($estimated_duration)) {
     header('Location: dashboard_vendor.php?status=error_missing_data');
     exit();
 }
 
-// Validasi: Pastikan WO exists, di-assign ke teknisi ini, dan statusnya Scheduled
+// Validasi: Pastikan WO exists dan di-assign ke teknisi ini
 $check_sql = "SELECT 
     wo.id, 
     wo.wo_code, 
     wo.ticket_id, 
     wo.status,
+    wo.scheduled_visit_date,
     t.ticket_code,
-    c.full_name as customer_name
+    c.full_name as customer_name,
+    c.address as customer_address
 FROM tr_work_orders wo
 JOIN tr_tickets t ON wo.ticket_id = t.id
 JOIN ms_customers c ON t.customer_id = c.id
 WHERE wo.id = '$wo_id' 
 AND wo.assigned_to_vendor_id = '$vendor_user_id' 
-AND wo.status = 'Scheduled'";
+AND wo.status IN ('Scheduled', 'Scheduled by Admin IKR')";
 
 $check_result = mysqli_query($conn, $check_sql);
 
@@ -55,30 +57,36 @@ $wo_data = mysqli_fetch_assoc($check_result);
 mysqli_autocommit($conn, FALSE);
 
 try {
-    // 1. Update Work Order ke status "In Progress"
+    // 1. Update Work Order status ke "In Progress"
     $update_wo_sql = "UPDATE tr_work_orders SET 
                       status = 'In Progress',
                       started_at = '$current_time',
-                      estimated_duration = '$estimated_duration',
-                      pre_work_notes = '$pre_work_notes'
-                      WHERE id = '$wo_id'";
+                      estimated_duration = '$estimated_duration'";
+    
+    if (!empty($pre_work_notes)) {
+        $update_wo_sql .= ", pre_work_notes = '$pre_work_notes'";
+    }
+    
+    $update_wo_sql .= " WHERE id = '$wo_id'";
     
     if (!mysqli_query($conn, $update_wo_sql)) {
-        throw new Exception("Gagal update Work Order: " . mysqli_error($conn));
+        throw new Exception("Gagal update Work Order status: " . mysqli_error($conn));
     }
 
-    // 2. Log activity ke tr_ticket_updates
-    $activity_description = "Teknisi IKR mulai mengerjakan Work Order";
-    if ($location_confirmed) {
-        $activity_description .= " - Konfirmasi sudah sampai di lokasi customer";
-    }
+    // 2. Log activity
+    $activity_desc = "Teknisi IKR telah memulai Work Order. ";
+    $activity_desc .= "Lokasi telah dikonfirmasi. ";
+    $activity_desc .= "Estimasi waktu pengerjaan: $estimated_duration menit. ";
+    
     if (!empty($pre_work_notes)) {
-        $activity_description .= ". Catatan awal: " . substr($pre_work_notes, 0, 100);
+        $activity_desc .= "Catatan awal: " . substr($pre_work_notes, 0, 100);
+        if (strlen($pre_work_notes) > 100) {
+            $activity_desc .= "...";
+        }
     }
-    $activity_description .= ". Estimasi pengerjaan: $estimated_duration menit";
     
     $insert_update_sql = "INSERT INTO tr_ticket_updates (ticket_id, user_id, update_type, description) 
-                          VALUES ('{$wo_data['ticket_id']}', '$vendor_user_id', 'Status Change', '$activity_description')";
+                          VALUES ('{$wo_data['ticket_id']}', '$vendor_user_id', 'Status Change', '$activity_desc')";
     
     if (!mysqli_query($conn, $insert_update_sql)) {
         throw new Exception("Gagal mencatat aktivitas start work: " . mysqli_error($conn));

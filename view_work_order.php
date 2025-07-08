@@ -24,6 +24,7 @@ $sql_wo_detail = "SELECT
     wo.visit_report,
     t.id as ticket_id,
     t.ticket_code,
+    t.jenis_tiket,
     t.title as ticket_title,
     t.description as ticket_description,
     t.status as ticket_status,
@@ -31,6 +32,8 @@ $sql_wo_detail = "SELECT
     c.customer_id_number,
     c.full_name as customer_name,
     c.address as customer_address,
+    c.provinsi,
+    c.kota,
     c.phone_number as customer_phone,
     c.email as customer_email,
     u_creator.full_name as created_by_name,
@@ -132,7 +135,7 @@ function formatTanggalIndonesia($datetime) {
             <!-- Info Work Order -->
             <section class="card ticket-info-card">
                 <div class="card-header">
-                    <h3>🛠️ Informasi Work Order</h3>
+                    <h3>Informasi Work Order</h3>
                     <div class="ticket-status-badge">
                         <?php 
                         $status_color = '';
@@ -162,6 +165,12 @@ function formatTanggalIndonesia($datetime) {
                         </a>
                     </div>
                     <div class="info-row">
+                        <label>Jenis Work Order:</label>
+                        <span style="font-weight: 500; color:rgb(0, 0, 0);">
+                        <?php echo htmlspecialchars($wo['jenis_tiket']); ?>
+                        </span>
+                    </div>
+                    <div class="info-row">
                         <label>Jenis Masalah:</label>
                         <span style="font-weight: 500;"><?php echo htmlspecialchars($wo['ticket_title']); ?></span>
                     </div>
@@ -181,17 +190,17 @@ function formatTanggalIndonesia($datetime) {
                         <label>Assigned Technician:</label>
                         <?php if ($wo['assigned_vendor_name']): ?>
                             <span style="font-weight: 500; color: #28a745;">
-                                👨‍🔧 <?php echo htmlspecialchars($wo['assigned_vendor_name']); ?>
+                                <?php echo htmlspecialchars($wo['assigned_vendor_name']); ?>
                             </span>
                         <?php else: ?>
-                            <span style="color: #ffc107;">⏳ Belum di-assign</span>
+                            <span style="color: #ffc107;"> Belum di-assign</span>
                         <?php endif; ?>
                     </div>
                     <?php if ($wo['scheduled_visit_date']): ?>
                     <div class="info-row">
                         <label>Scheduled Visit:</label>
                         <span style="font-weight: 500; color: #17a2b8;">
-                            📅 <?php echo formatTanggalIndonesia($wo['scheduled_visit_date']); ?>
+                            <?php echo formatTanggalIndonesia($wo['scheduled_visit_date']); ?>
                         </span>
                     </div>
                     <?php endif; ?>
@@ -211,17 +220,17 @@ function formatTanggalIndonesia($datetime) {
                 <div class="ticket-actions">
                     <?php if ($wo['wo_status'] == 'Pending'): ?>
                         <button onclick="scheduleWO(<?php echo $wo['id']; ?>)" class="btn-action btn-schedule" style="background-color: #17a2b8; color: white;">
-                            📅 Schedule WO
+                            Schedule WO
                         </button>
                         <a href="assign_technician.php?wo_id=<?php echo $wo['id']; ?>" class="btn-action btn-assign" style="background-color: #28a745; color: white; text-decoration: none;">
-                            👨‍🔧 Assign Technician
+                            Assign Technician
                         </a>
                     <?php elseif ($wo['wo_status'] == 'Scheduled'): ?>
                         <button onclick="editSchedule(<?php echo $wo['id']; ?>)" class="btn-action btn-edit" style="background-color: #ffc107; color: #212529;">
-                            ✏️ Edit Schedule
+                            Edit Schedule
                         </button>
                         <a href="assign_technician.php?wo_id=<?php echo $wo['id']; ?>" class="btn-action btn-assign" style="background-color: #28a745; color: white; text-decoration: none;">
-                            🔄 Reassign
+                            Reassign
                         </a>
                     <?php endif; ?>
                 </div>
@@ -231,7 +240,7 @@ function formatTanggalIndonesia($datetime) {
             <!-- Info Customer -->
             <section class="card customer-info-card">
                 <div class="card-header">
-                    <h3>👤 Informasi Customer</h3>
+                    <h3>Informasi Customer</h3>
                 </div>
                 <div class="customer-info">
                     <div class="info-row">
@@ -249,24 +258,24 @@ function formatTanggalIndonesia($datetime) {
                     <div class="info-row">
                         <label>No. Telepon:</label>
                         <span style="font-weight: 500; color: #28a745;">
-                            📞 <?php echo htmlspecialchars($wo['customer_phone']); ?>
+                            <?php echo htmlspecialchars($wo['customer_phone']); ?>
                         </span>
                     </div>
                     <div class="info-row">
                         <label>Alamat Kunjungan:</label>
                         <div class="address-box" style="border-left-color: #17a2b8;">
-                            📍 <?php echo nl2br(htmlspecialchars($wo['customer_address'])); ?>
+                            <?php echo nl2br(htmlspecialchars($wo['customer_address'])); ?>
                         </div>
                     </div>
-                    
-                    <?php if ($wo['assigned_vendor_name'] && $wo['scheduled_visit_date']): ?>
-                    <div style="margin-top: 20px; padding: 15px; background-color: #e8f5e8; border-radius: 6px; border-left: 4px solid #28a745;">
-                        <h4 style="margin-top: 0; color: #28a745; font-size: 14px;">📋 Info Kunjungan</h4>
-                        <p style="margin: 5px 0; font-size: 13px;"><strong>Teknisi:</strong> <?php echo htmlspecialchars($wo['assigned_vendor_name']); ?></p>
-                        <p style="margin: 5px 0; font-size: 13px;"><strong>Jadwal:</strong> <?php echo formatTanggalIndonesia($wo['scheduled_visit_date']); ?></p>
-                        <p style="margin: 5px 0; font-size: 13px;"><strong>Status:</strong> <?php echo htmlspecialchars($wo['wo_status']); ?></p>
+                    <div class="info-row">
+                        <label>Provinsi:</label>
+                        <span><?php echo htmlspecialchars($wo['provinsi'] ?? '-'); ?></span>
                     </div>
-                    <?php endif; ?>
+                    <div class="info-row">
+                        <label>Kabupaten/Kota:</label>
+                        <span><?php echo htmlspecialchars($wo['kota'] ?? '-'); ?></span>
+                    </div>
+            
                 </div>
             </section>
 
@@ -275,7 +284,7 @@ function formatTanggalIndonesia($datetime) {
         <!-- Timeline/History Ticket -->
         <section class="card timeline-card">
             <div class="card-header">
-                <h3>📝 Riwayat Aktivitas Ticket & Work Order</h3>
+                <h3>Riwayat Aktivitas Ticket & Work Order</h3>
             </div>
             <div class="ticket-info">
                 <?php if (empty($updates)): ?>
@@ -304,6 +313,13 @@ function formatTanggalIndonesia($datetime) {
                                         <span class="update-type"><?php echo htmlspecialchars($update['update_type']); ?></span>
                                         <span class="update-time"><?php echo formatTanggalIndonesia($update['created_at']); ?></span>
                                     </div>
+                                    <div class="timeline-desc" style="margin: 6px 0 4px 0;">
+                                        <?php echo nl2br(htmlspecialchars($update['description'])); ?>
+                                    </div>
+                                    <div class="timeline-meta" style="font-size:12px; color:#888;">
+                                        Oleh: <b><?php echo htmlspecialchars($update['user_name']); ?></b>
+                                        (<?php echo htmlspecialchars($update['user_role']); ?>)
+                                    </div>
                                 </div>  
                             </div>
                         <?php endforeach; ?>
@@ -314,3 +330,12 @@ function formatTanggalIndonesia($datetime) {
 
     </div>
 </div>
+
+<style>
+body {
+    background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+    min-height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    }
+</style>
