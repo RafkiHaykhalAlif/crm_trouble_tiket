@@ -35,12 +35,23 @@ $dispatch_sql = "SELECT id FROM ms_users WHERE role = 'Dispatch' LIMIT 1";
 $dispatch_result = mysqli_query($conn, $dispatch_sql);
 
 if (mysqli_num_rows($dispatch_result) == 0) {
-    // Jika tidak ada user Dispatch, ubah langsung status jadi Waiting for Dispatch
-    // dengan current_owner tetap BOR untuk sementara
-    $dispatch_user_id = $bor_user_id; // Sementara tetap di BOR
+    header('Location: dashboard_bor.php?status=error_no_dispatch');
+    exit();
+}
+
+$dispatch_user = mysqli_fetch_assoc($dispatch_result);
+$dispatch_user_id = $dispatch_user['id'];
+
+// FIX: Cari vendor IKR untuk assigned_to_vendor_id (karena NOT NULL)
+$vendor_sql = "SELECT id FROM ms_users WHERE role = 'Vendor IKR' LIMIT 1";
+$vendor_result = mysqli_query($conn, $vendor_sql);
+
+if (mysqli_num_rows($vendor_result) == 0) {
+    // Jika tidak ada vendor, gunakan user dispatch sebagai temporary assignment
+    $vendor_id = $dispatch_user_id;
 } else {
-    $dispatch_user = mysqli_fetch_assoc($dispatch_result);
-    $dispatch_user_id = $dispatch_user['id'];
+    $vendor_user = mysqli_fetch_assoc($vendor_result);
+    $vendor_id = $vendor_user['id'];
 }
 
 // Mulai transaksi database
@@ -66,14 +77,30 @@ try {
         throw new Exception("Gagal mencatat aktivitas dispatch");
     }
 
-    // 3. Buat Work Order otomatis (opsional - bisa dikembangkan nanti)
+    // 3. Buat Work Order dengan status "Sent to Dispatch" - assigned_to_vendor_id = NULL
     $wo_code = 'WO-' . date('Ymd') . '-' . strtoupper(uniqid());
     
-    $insert_wo_sql = "INSERT INTO tr_work_orders (wo_code, ticket_id, created_by_dispatch_id, assigned_to_vendor_id, status) 
-                      VALUES ('$wo_code', '$ticket_id', '$dispatch_user_id', '$dispatch_user_id', 'Pending')";
+    $insert_wo_sql = "INSERT INTO tr_work_orders (
+        wo_code, 
+        ticket_id, 
+        created_by_dispatch_id, 
+        assigned_to_vendor_id,
+        status,
+        priority_level,
+        created_at
+    ) VALUES (
+        '$wo_code', 
+        '$ticket_id', 
+        '$bor_user_id', 
+        NULL, -- <--- teknisi belum di-assign
+        'Sent to Dispatch',
+        'Normal',
+        NOW()
+    )";
     
-    // Ini opsional, jadi kalaupun gagal tidak masalah
-    mysqli_query($conn, $insert_wo_sql);
+    if (!mysqli_query($conn, $insert_wo_sql)) {
+        throw new Exception("Gagal membuat Work Order: " . mysqli_error($conn));
+    }
 
     // Commit transaksi
     mysqli_commit($conn);

@@ -19,16 +19,20 @@ $ticket_id = (int)$_GET['id'];
 $sql_ticket_detail = "SELECT 
     t.id,
     t.ticket_code,
+    t.jenis_tiket,
     t.title,
     t.description,
     t.status,
     t.created_at,
     t.closed_at,
+    t.complain_channel,
     c.customer_id_number,
     c.full_name as customer_name,
     c.address,
     c.phone_number,
     c.email,
+    c.provinsi,
+    c.kota,
     u_creator.full_name as created_by_name,
     u_owner.full_name as current_owner_name,
     u_owner.role as current_owner_role
@@ -128,6 +132,9 @@ function formatTanggalIndonesia($datetime) {
                         <strong><?php echo htmlspecialchars($ticket['ticket_code']); ?></strong>
                     </div>
                     <div class="info-row">
+                        <label>Jenis Tiket:</label>
+                        <span><?php echo htmlspecialchars($ticket['jenis_tiket']); ?></span>
+                    </div><div class="info-row">
                         <label>Jenis Masalah:</label>
                         <span><?php echo htmlspecialchars($ticket['title']); ?></span>
                     </div>
@@ -150,6 +157,10 @@ function formatTanggalIndonesia($datetime) {
                         <span><?php echo htmlspecialchars($ticket['current_owner_name']); ?> 
                               <small>(<?php echo htmlspecialchars($ticket['current_owner_role']); ?>)</small>
                         </span>
+                    </div>
+                    <div class="info-row">
+                        <label>Channel Pengaduan:</label>
+                        <span><?php echo htmlspecialchars($ticket['complain_channel']); ?></span>
                     </div>
                     <?php if ($ticket['closed_at']): ?>
                     <div class="info-row">
@@ -199,6 +210,14 @@ function formatTanggalIndonesia($datetime) {
                     <div class="info-row">
                         <label>No. Telepon:</label>
                         <span><?php echo htmlspecialchars($ticket['phone_number']); ?></span>
+                    </div>
+                    <div class="info-row">
+                        <label>Provinsi:</label>
+                        <span><?php echo htmlspecialchars($ticket['provinsi']); ?></span>
+                    </div>
+                    <div class="info-row">
+                        <label>Kabupaten/Kota:</label>
+                        <span><?php echo htmlspecialchars($ticket['kota']); ?></span>
                     </div>
                     <div class="info-row">
                         <label>Alamat:</label>
