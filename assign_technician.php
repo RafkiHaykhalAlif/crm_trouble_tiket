@@ -1,13 +1,11 @@
 <?php
 include 'config/db_connect.php';
 
-// Cek apakah user sudah login dan adalah Dispatch
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'Dispatch') {
     header('Location: login.php');
     exit();
 }
 
-// Cek parameter wo_id
 if (!isset($_GET['wo_id']) || empty($_GET['wo_id'])) {
     header('Location: dashboard_dispatch.php');
     exit();
@@ -15,7 +13,6 @@ if (!isset($_GET['wo_id']) || empty($_GET['wo_id'])) {
 
 $wo_id = (int)$_GET['wo_id'];
 
-// Ambil data Work Order
 $sql_wo = "SELECT 
     wo.id,
     wo.wo_code,
@@ -39,40 +36,34 @@ if (mysqli_num_rows($result_wo) == 0) {
 
 $wo = mysqli_fetch_assoc($result_wo);
 
-// Ambil daftar teknisi IKR
 $sql_vendors = "SELECT id, full_name FROM ms_users WHERE role = 'Vendor IKR' ORDER BY full_name";
 $result_vendors = mysqli_query($conn, $sql_vendors);
 $vendors = mysqli_fetch_all($result_vendors, MYSQLI_ASSOC);
 
-// Handle form submission
 $message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $assigned_vendor = (int)$_POST['assigned_vendor'];
     
     if (!empty($assigned_vendor)) {
-        // Validasi vendor
         $vendor_check = "SELECT full_name FROM ms_users WHERE id = '$assigned_vendor' AND role = 'Vendor IKR'";
         $vendor_result = mysqli_query($conn, $vendor_check);
         
         if (mysqli_num_rows($vendor_result) == 1) {
             $vendor_data = mysqli_fetch_assoc($vendor_result);
-            
-            // Update assignment
             $update_sql = "UPDATE tr_work_orders SET assigned_to_vendor_id = '$assigned_vendor' WHERE id = '$wo_id'";
             
             if (mysqli_query($conn, $update_sql)) {
-                $message = '<div class="alert alert-success">✅ Teknisi berhasil di-assign ke Work Order!</div>';
+                $message = '<div class="alert alert-success">Teknisi berhasil di-assign ke Work Order!</div>';
                 
-                // Update data WO untuk ditampilkan
                 $wo['assigned_to_vendor_id'] = $assigned_vendor;
             } else {
-                $message = '<div class="alert alert-error">❌ Gagal assign teknisi: ' . mysqli_error($conn) . '</div>';
+                $message = '<div class="alert alert-error">Gagal assign teknisi: ' . mysqli_error($conn) . '</div>';
             }
         } else {
-            $message = '<div class="alert alert-error">❌ Teknisi tidak valid!</div>';
+            $message = '<div class="alert alert-error">Teknisi tidak valid!</div>';
         }
     } else {
-        $message = '<div class="alert alert-error">❌ Pilih teknisi terlebih dahulu!</div>';
+        $message = '<div class="alert alert-error">Pilih teknisi terlebih dahulu!</div>';
     }
 }
 
@@ -99,7 +90,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     <main class="container">
         
-        <!-- Tombol Kembali -->
         <div class="back-button-section">
             <a href="dashboard_dispatch.php" class="btn-back">← Kembali ke Dashboard</a>
         </div>
@@ -108,7 +98,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         <div class="dashboard-grid">
             
-            <!-- Info Work Order -->
             <div class="main-action-column">
                 <section class="card">
                     <h3>📋 Informasi Work Order</h3>
@@ -149,7 +138,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 </section>
             </div>
 
-            <!-- Form Assign Technician -->
             <div class="ticket-list-column">
                 <section class="card">
                     <h3>👨‍🔧 Assign Technician</h3>
@@ -161,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $current_vendor = mysqli_fetch_assoc($current_vendor_result);
                         ?>
                         <div class="alert alert-success">
-                            <strong>✅ Teknisi Saat Ini:</strong><br>
+                            <strong>Teknisi Saat Ini:</strong><br>
                             <?php echo htmlspecialchars($current_vendor['full_name']); ?>
                         </div>
                     <?php endif; ?>
@@ -181,12 +169,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         </div>
                         
                         <button type="submit" class="btn">
-                            <?php echo $wo['assigned_to_vendor_id'] ? '🔄 Update Assignment' : '👨‍🔧 Assign Technician'; ?>
+                            <?php echo $wo['assigned_to_vendor_id'] ? 'Update Assignment' : 'Assign Technician'; ?>
                         </button>
                     </form>
                     
                     <div style="margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 5px; border-left: 4px solid #17a2b8;">
-                        <h4 style="margin-top: 0; color: #17a2b8;">📝 Teknisi Available</h4>
+                        <h4 style="margin-top: 0; color: #17a2b8;">Teknisi Available</h4>
                         <ul style="margin: 10px 0; padding-left: 20px;">
                             <?php foreach ($vendors as $vendor): ?>
                                 <li style="margin-bottom: 5px;">

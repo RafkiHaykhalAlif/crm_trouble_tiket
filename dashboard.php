@@ -1,21 +1,18 @@
 <?php
-// Panggil file koneksi & lakukan penjagaan halaman
+
 include 'config/db_connect.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit(); }
 
-// --- ROUTING BERDASARKAN ROLE ---
 if ($_SESSION['user_role'] === 'BOR') { header('Location: dashboard_bor.php'); exit(); }
 if ($_SESSION['user_role'] === 'Dispatch') { header('Location: dashboard_dispatch.php'); exit(); }
 if ($_SESSION['user_role'] === 'Vendor IKR') { header('Location: dashboard_vendor.php'); exit(); }
 if ($_SESSION['user_role'] === 'Admin IKR') { header('Location: dashboard_admin_ikr.php'); exit(); }
 
-// --- Pesan status ---
 $message = '';
 if (isset($_GET['status']) && $_GET['status'] == 'sukses') {
     $message = '<div class="alert alert-success">Ticket baru berhasil dibuat!</div>';
 }
 
-// Ambil semua tiket
 $sql_get_tickets = "SELECT t.id, t.ticket_code, c.full_name, t.status, t.title, t.created_at, t.jenis_tiket
                     FROM tr_tickets t
                     JOIN ms_customers c ON t.customer_id = c.id
@@ -27,7 +24,6 @@ while ($row = mysqli_fetch_assoc($result)) {
     $tickets[] = $row;
 }
 
-// Cek pencarian
 $search_ticket = isset($_GET['search_ticket']) ? trim($_GET['search_ticket']) : '';
 $searched_ticket = null;
 if ($search_ticket !== '') {
@@ -63,14 +59,13 @@ if ($search_ticket !== '') {
     <main class="container">
         <?php echo $message; ?> 
     
-        <div class="d-flex justify-content-center my-4">
+        <div class="statistik-tiket-wrapper">
             <a href="dashboard_statistik_tiket.php" class="btn btn-gradient-statistik btn-lg shadow px-5 py-2">
                 <i class="fas fa-chart-bar me-2"></i>
                 <span style="font-weight:600; letter-spacing:0.5px;">Statistik Tiket</span>
             </a>
         </div>
 
-        <!-- Main Dashboard Grid -->
         <div class="dashboard-grid">
             <div class="main-action-column">
                 <section class="card">
@@ -119,7 +114,6 @@ if ($search_ticket !== '') {
                                 </select>    
                             <label for="jenis_gangguan">Jenis Gangguan</label>
                                 <select id="jenis_gangguan_select" name="jenis_gangguan_select" onchange="updateJenisGangguan()" required>
-                                    <!-- Opsi akan diisi lewat JS -->
                                 </select>
                                 <input type="text" id="jenis_gangguan" name="jenis_gangguan" placeholder="Atau ketik manual jenis gangguan" required style="margin-top: 10px;">
                             </div>
@@ -145,8 +139,6 @@ if ($search_ticket !== '') {
             <div class="ticket-list-column">
                 <section class="card">
                     <h3>Recent Tickets & Activity</h3>
-                    
-                    <!-- Container dengan scroll -->
                     <div style="max-height: 1280px; overflow-y: auto;">
                         <form method="get" style="margin-bottom: 12px; display: flex; gap: 8px;">
                             <input type="text" name="search_ticket" placeholder="Cari ID Tiket..." value="<?php echo isset($_GET['search_ticket']) ? htmlspecialchars($_GET['search_ticket']) : ''; ?>" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #ccc;">
@@ -161,7 +153,6 @@ if ($search_ticket !== '') {
                                     <tr><td colspan="7" style="text-align: center;">Belum ada tiket.</td></tr>
                                 <?php else: ?>
                                     <?php if ($searched_ticket): ?>
-                                        <!-- Tiket hasil pencarian di atas -->
                                         <tr style="background: #e3f2fd;">
                                             <td><strong><?php echo htmlspecialchars($searched_ticket['ticket_code']); ?></strong></td>
                                             <td><?php echo htmlspecialchars($searched_ticket['full_name']); ?></td>
@@ -301,7 +292,6 @@ if ($search_ticket !== '') {
             }
         }
 
-        // Inisialisasi awal (jika ingin default Maintenance)
         document.addEventListener('DOMContentLoaded', function() {
             populateGangguanOptions(document.getElementById('jenis_tiket').value);
         });
@@ -333,14 +323,13 @@ if ($search_ticket !== '') {
         const kotaSelect = document.getElementById('kota');
         if (!provinsiSelect || !kotaSelect) return;
 
-        // Ambil provinsi
         fetch('wilayah_proxy.php?type=provinces')
             .then(res => res.json())
             .then(provinces => {
                 provinces.forEach(prov => {
                     const opt = document.createElement('option');
                     opt.value = prov.id;
-                    opt.setAttribute('data-nama', prov.name); // Simpan nama provinsi di atribut data
+                    opt.setAttribute('data-nama', prov.name); 
                     opt.textContent = prov.name;
                     provinsiSelect.appendChild(opt);
                 });
@@ -383,7 +372,7 @@ if ($search_ticket !== '') {
             display: flex;
             flex-direction: row;
             gap: 24px;
-            margin-top: 40px; /* Tambahkan jarak atas */
+            margin-top: 40px; 
         }
 
         /* Field Operations Section */
@@ -413,7 +402,6 @@ if ($search_ticket !== '') {
         }
 
         .field-card:hover {
-            /* Jangan ubah background, hanya tambahkan efek lain jika mau */
             box-shadow: 0 8px 24px rgba(0,0,0,0.10);
             transform: translateY(-2px) scale(1.03);
         }
@@ -436,7 +424,6 @@ if ($search_ticket !== '') {
             font-weight: 500;
         }
 
-        /* Quick Stats in ticket section */
         .quick-stats {
             display: grid;
             grid-template-columns: 1fr 1fr 1fr;
@@ -572,7 +559,6 @@ if ($search_ticket !== '') {
             }
         }
 
-        /* Enhanced table styling for better data presentation */
         .ticket-table {
             font-size: 0.9rem;
         }
@@ -594,7 +580,6 @@ if ($search_ticket !== '') {
             background-color: #f8f9fa;
         }
 
-        /* Status indicators enhancement */
         .status {
             font-size: 0.8rem;
             text-transform: uppercase;
@@ -616,7 +601,6 @@ if ($search_ticket !== '') {
             animation: pulse 2s infinite;
         }
 
-        /* Print-friendly styles */
         @media print {
             .main-header,
             .btn-logout,
@@ -646,7 +630,6 @@ if ($search_ticket !== '') {
             border-bottom: 1px solid #eee;
         }
 
-        /* Custom styles for ticket creation and list layout */
         .dashboard-grid {
             display: flex;
             flex-direction: row;
@@ -674,14 +657,12 @@ if ($search_ticket !== '') {
             overflow-y: auto;
         }
 
-        /* Rata tengah semua kolom kecuali kolom pertama */
         .table-ticket th,
         .table-ticket td {
             text-align: center;
             vertical-align: middle;
         }
 
-        /* Kecualikan kolom pertama (ID Tiket) agar tetap rata kiri */
         .table-ticket th:first-child,
         .table-ticket td:first-child {
             text-align: left;
@@ -689,13 +670,13 @@ if ($search_ticket !== '') {
         .table-ticket {
         width: 100%;
         border-collapse: collapse;
-        border: 1px solid #bbb; /* Tambahkan border luar */
+        border: 1px solid #bbb; 
         }
 
         .table-ticket th, .table-ticket td {
             padding: 12px 10px;
             font-size: 14px;
-            border: 1px solid #bbb; /* Border antar sel */
+            border: 1px solid #bbb; 
             text-align: center;
             vertical-align: middle;
         }
@@ -753,6 +734,33 @@ if ($search_ticket !== '') {
         .field-card .field-number,
         .field-card .field-label {
             color: #fff !important;
+        }
+
+        .statistik-tiket-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 32px 0 0 0;
+            width: 100%;
+        }
+
+        .btn-gradient-statistik {
+            display: block;
+            width: 100%;
+            text-align: left;
+            font-size: 1.2rem;
+            padding: 14px 0;
+            padding-left: 32px;      
+            border-radius: 30px;
+            box-sizing: border-box;
+            background: linear-gradient(90deg, #1976d2 0%, #00c6ff 100%);
+            color: #fff !important;
+            border: none;
+            transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+            box-shadow: 0 4px 18px rgba(25, 118, 210, 0.12);
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 24px;
         }
 </style>
 

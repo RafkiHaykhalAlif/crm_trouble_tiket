@@ -1,13 +1,11 @@
 <?php
 include 'config/db_connect.php';
 
-// --- PENJAGA HALAMAN ---
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// Cek apakah ada parameter ID ticket
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     header('Location: dashboard.php');
     exit();
@@ -15,7 +13,6 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 
 $ticket_id = (int)$_GET['id'];
 
-// Query untuk ambil detail ticket lengkap dengan data customer dan user
 $sql_ticket_detail = "SELECT 
     t.id,
     t.ticket_code,
@@ -45,14 +42,12 @@ WHERE t.id = '$ticket_id'";
 $result_ticket = mysqli_query($conn, $sql_ticket_detail);
 
 if (mysqli_num_rows($result_ticket) == 0) {
-    // Ticket tidak ditemukan
     header('Location: dashboard.php?status=ticket_not_found');
     exit();
 }
 
 $ticket = mysqli_fetch_assoc($result_ticket);
 
-// Query untuk ambil history/update ticket
 $sql_updates = "SELECT 
     tu.update_type,
     tu.description,
@@ -67,7 +62,6 @@ ORDER BY tu.created_at DESC";
 $result_updates = mysqli_query($conn, $sql_updates);
 $updates = mysqli_fetch_all($result_updates, MYSQLI_ASSOC);
 
-// Fungsi helper untuk format tanggal Indonesia
 function formatTanggalIndonesia($datetime) {
     $tanggal = new DateTime($datetime);
     $bulan = [
@@ -107,14 +101,12 @@ function formatTanggalIndonesia($datetime) {
 
     <main class="container">
         
-        <!-- Tombol Kembali -->
         <div class="back-button-section">
             <a href="dashboard.php" class="btn-back">← Kembali ke Dashboard</a>
         </div>
 
         <div class="ticket-detail-grid">
             
-            <!-- Info Ticket -->
             <section class="card ticket-info-card">
                 <div class="card-header">
                     <h3>Informasi Ticket</h3>
@@ -170,28 +162,26 @@ function formatTanggalIndonesia($datetime) {
                     <?php endif; ?>
                 </div>
 
-                <!-- Action Buttons untuk Ticket -->
                 <div class="ticket-actions">
                     <?php if ($ticket['status'] == 'Open' || $ticket['status'] == 'On Progress - Customer Care'): ?>
                         <button onclick="solveTicket(<?php echo $ticket['id']; ?>)" class="btn-action btn-solve">
-                            ✓ Solve Ticket
+                            Solve Ticket
                         </button>
                         <button onclick="escalateTicket(<?php echo $ticket['id']; ?>)" class="btn-action btn-escalate">
-                            ↗ Escalate ke BOR
+                            Escalate ke BOR
                         </button>
                     <?php elseif ($ticket['status'] == 'On Progress - BOR'): ?>
                         <div class="ticket-status-info">
-                            <span class="text-info">📋 Ticket sedang ditangani oleh tim BOR</span>
+                            <span class="text-info">Ticket sedang ditangani oleh tim BOR</span>
                         </div>
                     <?php else: ?>
                         <div class="ticket-status-info">
-                            <span class="text-muted">🔒 Ticket sudah ditutup</span>
+                            <span class="text-muted">Ticket sudah ditutup</span>
                         </div>
                     <?php endif; ?>
                 </div>
             </section>
 
-            <!-- Info Customer -->
             <section class="card customer-info-card">
                 <h3>Informasi Customer</h3>
                 <div class="customer-info">
@@ -230,9 +220,8 @@ function formatTanggalIndonesia($datetime) {
 
         </div>
 
-        <!-- History/Timeline Ticket -->
         <section class="card timeline-card">
-            <h3>📝 Riwayat Aktivitas Ticket</h3>
+            <h3>Riwayat Aktivitas Ticket</h3>
             
             <?php if (empty($updates)): ?>
                 <div class="no-updates">
@@ -277,7 +266,6 @@ function formatTanggalIndonesia($datetime) {
     </main>
 
     <script>
-    // Fungsi yang sama kayak di dashboard
     function solveTicket(ticketId) {
         if (confirm('Apakah Anda yakin ticket ini sudah terselesaikan?')) {
             window.location.href = 'proses_solve_ticket.php?ticket_id=' + ticketId;

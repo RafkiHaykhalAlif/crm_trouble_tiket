@@ -1,15 +1,14 @@
 <?php
-// Script simpel buat generate hash password yang bener
 
 $password = '123456';
 $hash = password_hash($password, PASSWORD_DEFAULT);
 
-echo "<h3>🔑 Password Hash Generator</h3>";
+echo "<h3>Password Hash Generator</h3>";
 echo "<p><strong>Password:</strong> $password</p>";
 echo "<p><strong>Hash:</strong></p>";
 echo "<textarea rows='3' style='width: 100%; font-family: monospace;' readonly>$hash</textarea>";
 
-echo "<br><br><h4>📋 Copy-paste query ini ke phpMyAdmin:</h4>";
+echo "<br><br><h4>Copy-paste query ini ke phpMyAdmin:</h4>";
 echo "<textarea rows='5' style='width: 100%; font-family: monospace;' readonly>";
 echo "-- Update password untuk semua user Dispatch dan Vendor IKR\n";
 echo "UPDATE ms_users SET password = '$hash' WHERE username = 'dispatch_admin';\n";

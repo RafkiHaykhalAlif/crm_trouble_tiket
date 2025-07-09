@@ -1,13 +1,11 @@
 <?php
 include 'config/db_connect.php';
 
-// --- PENJAGA HALAMAN ---
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// Cek apakah user adalah Dispatch, kalau bukan redirect ke dashboard biasa
 if ($_SESSION['user_role'] !== 'Dispatch') {
     header('Location: dashboard.php');
     exit();
@@ -15,7 +13,6 @@ if ($_SESSION['user_role'] !== 'Dispatch') {
 
 $dispatch_user_id = $_SESSION['user_id'];
 
-// --- AMBIL DATA WORK ORDER UNTUK DISPATCH (NEW FLOW) ---
 $sql_get_work_orders = "SELECT 
     wo.id,
     wo.wo_code,
@@ -57,7 +54,6 @@ ORDER BY
 $result_work_orders = mysqli_query($conn, $sql_get_work_orders);
 $work_orders = mysqli_fetch_all($result_work_orders, MYSQLI_ASSOC);
 
-// --- STATISTIK DASHBOARD DISPATCH (NEW FLOW) ---
 $sql_stats = "SELECT 
     SUM(CASE WHEN status = 'Sent to Dispatch' THEN 1 ELSE 0 END) as new_from_bor,
     SUM(CASE WHEN status = 'Received by Admin IKR' THEN 1 ELSE 0 END) as with_admin_ikr,
@@ -70,7 +66,6 @@ FROM tr_work_orders wo";
 $result_stats = mysqli_query($conn, $sql_stats);
 $stats = mysqli_fetch_assoc($result_stats);
 
-// --- Cek pesan dari proses ---
 $message = '';
 if (isset($_GET['status'])) {
     switch($_GET['status']) {
@@ -110,7 +105,6 @@ if (isset($_GET['status'])) {
     <main class="container">
         <?php echo $message; ?>
         
-        <!-- Statistik Dashboard Dispatch (NEW FLOW) -->
         <div class="stats-grid">
             <div class="stat-card stat-new">
                 <div class="stat-number"><?php echo $stats['new_from_bor']; ?></div>
@@ -136,7 +130,6 @@ if (isset($_GET['status'])) {
 
         <div class="dashboard-row" style="display: flex; gap: 24px; align-items: stretch;">
             <section class="card" style="flex: 1;">
-                <!-- Dispatch Workflow -->
                 <h3>Work Order Flow Control</h3>
                 
                 <div class="quick-actions">
@@ -161,7 +154,6 @@ if (isset($_GET['status'])) {
             <section class="card" style="flex: 2; display: flex; flex-direction: column;">
                 <h3>Work Orders Pipeline</h3>
                 
-                <!-- Form pencarian Work Order -->
                 <form id="searchWOForm" style="margin-bottom: 12px; display: flex; gap: 8px; max-width: 400px;">
                     <input type="text" id="searchWOInput" placeholder="Cari ID WO..." 
                         style="padding: 6px 12px; border-radius: 6px; border: 1px solid #ccc; flex: 1; max-width: 220px;">
@@ -341,7 +333,6 @@ if (isset($_GET['status'])) {
         </div>
     </main>
 
-    <!-- Modal untuk Close WO -->
     <div id="closeWoModal" class="modal" style="display: none;">
         <div class="modal-content modal-large">
             <span class="close" onclick="closeCloseWoModal()">&times;</span>
@@ -362,485 +353,469 @@ if (isset($_GET['status'])) {
     </div>
 
     <script>
-    // Modal functions
-    function forwardToAdminIKR(woId) {
-        if (confirm('Forward this Work Order to Admin Back Office IKR for scheduling?')) {
-            window.location.href = 'forward_wo_to_admin_ikr.php?wo_id=' + woId;
+        function forwardToAdminIKR(woId) {
+            if (confirm('Forward this Work Order to Admin Back Office IKR for scheduling?')) {
+                window.location.href = 'forward_wo_to_admin_ikr.php?wo_id=' + woId;
+            }
         }
-    }
 
-    function sendToBOR(woId) {
-        if (confirm('Send work completion proof to BOR for final ticket closure?')) {
-            window.location.href = 'send_proof_to_bor.php?wo_id=' + woId;
+        function sendToBOR(woId) {
+            if (confirm('Send work completion proof to BOR for final ticket closure?')) {
+                window.location.href = 'send_proof_to_bor.php?wo_id=' + woId;
+            }
         }
-    }
 
-    function openCloseWoModal(woId) {
-        document.getElementById('closeWoId').value = woId;
-        document.getElementById('closeWoModal').style.display = 'block';
-    }
+        function openCloseWoModal(woId) {
+            document.getElementById('closeWoId').value = woId;
+            document.getElementById('closeWoModal').style.display = 'block';
+        }
 
-    function closeCloseWoModal() {
-        document.getElementById('closeWoModal').style.display = 'none';
-    }
+        function closeCloseWoModal() {
+            document.getElementById('closeWoModal').style.display = 'none';
+        }
 
-    // Filter functions
-    function showAllWO() {
-        const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
-        rows.forEach(row => row.style.display = '');
-    }
+        function showAllWO() {
+            const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
+            rows.forEach(row => row.style.display = '');
+        }
 
-    function showNewFromBOR() {
-        const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
-        rows.forEach(row => {
-            if (row.dataset.status === 'Sent to Dispatch') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
+        function showNewFromBOR() {
+            const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                if (row.dataset.status === 'Sent to Dispatch') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showWithAdminIKR() {
+            const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                if (row.dataset.status === 'received-by-admin-ikr' || row.dataset.status === 'scheduled-by-admin-ikr') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showInProgress() {
+            const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                if (row.dataset.status === 'in-progress') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showNeedReview() {
+            const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                if (row.dataset.status === 'completed-by-technician') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const tbody = document.querySelector('#dispatchWorkOrderTable tbody');
+            if (!tbody) return;
+
+            const originalRows = Array.from(tbody.querySelectorAll('tr'));
+            const searchForm = document.getElementById('searchWOForm');
+            const searchInput = document.getElementById('searchWOInput');
+
+            if (!searchForm || !searchInput) return;
+
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const searchValue = searchInput.value.trim().toLowerCase();
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                rows.forEach(row => row.classList.remove('search-highlight'));
+                originalRows.forEach(row => tbody.appendChild(row));
+
+                if (searchValue === '') return;
+
+                let foundRows = [];
+                rows.forEach(row => {
+                    const woId = (row.dataset.woid || '').toLowerCase();
+                    if (woId.includes(searchValue)) {
+                        foundRows.push(row);
+                    }
+                });
+
+                foundRows.reverse().forEach(row => {
+                    row.classList.add('search-highlight');
+                    tbody.insertBefore(row, tbody.firstChild);
+                });
+            });
         });
-    }
-
-    function showWithAdminIKR() {
-        const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
-        rows.forEach(row => {
-            if (row.dataset.status === 'received-by-admin-ikr' || row.dataset.status === 'scheduled-by-admin-ikr') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    function showInProgress() {
-        const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
-        rows.forEach(row => {
-            if (row.dataset.status === 'in-progress') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    function showNeedReview() {
-        const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
-        rows.forEach(row => {
-            if (row.dataset.status === 'completed-by-technician') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
 
     </script>
 
     <style>
     
-    body {
-    background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
-    min-height: 100vh;
-    margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    }
+        body {
+        background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+        min-height: 100vh;
+        margin: 0;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        }
 
-    /* Dispatch specific styles (updated) */
-    .user-role-dispatch {
-        background-color: #17a2b8 !important;
-    }
+        .user-role-dispatch {
+            background-color: #17a2b8 !important;
+        }
 
-    .dashboard-dispatch-grid {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 30px;
-    }
-
-    @media (max-width: 992px) {
         .dashboard-dispatch-grid {
-            grid-template-columns: 1fr;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
         }
-    }
 
-    /* New stat card colors for updated flow */
-    .stat-new {
-        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-    }
-
-    .stat-admin {
-        background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
-    }
-
-    .stat-scheduled {
-        background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
-    }
-
-    .stat-progress {
-        background: linear-gradient(135deg, #fd7e14 0%, #dc3545 100%);
-    }
-
-    .stat-review {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        position: relative;
-    }
-
-    .stat-review::after {
-        content: '!';
-        position: absolute;
-        top: 10px;
-        right: 15px;
-        font-size: 24px;
-        font-weight: bold;
-        color: rgba(255,255,255,0.8);
-        animation: pulse-icon 2s infinite;
-    }
-
-    @keyframes pulse-icon {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.2); }
-        100% { transform: scale(1); }
-    }
-
-    /* Workflow info section */
-    .dispatch-workflow-info {
-        margin-top: 25px;
-        padding: 20px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        border-left: 4px solid #17a2b8;
-    }
-
-    .dispatch-workflow-info h4 {
-        margin-top: 0;
-        color: #17a2b8;
-        font-size: 1rem;
-        margin-bottom: 15px;
-    }
-
-    .workflow-steps {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .step {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 12px;
-        background-color: white;
-        border-radius: 6px;
-        border: 1px solid #dee2e6;
-    }
-
-    .step-number {
-        width: 24px;
-        height: 24px;
-        background-color: #17a2b8;
-        color: white;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 12px;
-        font-weight: bold;
-        flex-shrink: 0;
-    }
-
-    .step-text {
-        font-size: 13px;
-        color: #495057;
-        font-weight: 500;
-    }
-
-    /* Dispatch action buttons */
-    .dispatch-action-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        width: 100%;
-    }
-
-    .btn-dispatch-action {
-        padding: 4px 8px;
-        border: none;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 500;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-    }
-
-    .btn-forward {
-        background-color: #6f42c1;
-        color: white;
-    }
-
-    .btn-review {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-report {
-        background-color: #fd7e14;
-        color: white;
-    }
-
-    .btn-send-bor {
-        background-color: #17a2b8;
-        color: white;
-    }
-
-    .btn-dispatch-action:hover {
-        transform: scale(1.05);
-        opacity: 0.9;
-    }
-
-    /* Modal styling */
-    .modal {
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.5);
-        overflow-y: auto;
-    }
-
-    .modal-content {
-        background-color: white;
-        margin: 2% auto;
-        padding: 30px;
-        border-radius: 10px;
-        width: 90%;
-        max-width: 500px;
-        position: relative;
-    }
-
-    .modal-large {
-        max-width: 700px;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    .close {
-        position: absolute;
-        right: 15px;
-        top: 15px;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-        z-index: 1001;
-    }
-
-    .close:hover {
-        color: #dc3545;
-    }
-
-    /* Form sections */
-    .form-section {
-        margin-bottom: 25px;
-        padding: 20px;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        background-color: #f8f9fa;
-    }
-
-    .form-section h4 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        color: #495057;
-        font-size: 1.1rem;
-        border-bottom: 2px solid #dee2e6;
-        padding-bottom: 8px;
-    }
-
-    .btn-large {
-        padding: 15px 30px;
-        font-size: 16px;
-        font-weight: 600;
-        margin-top: 20px;
-        width: 100%;
-    }
-
-    /* Tabel rapi dan ada garis */
-    .ticket-table {
-        width: 100%;
-        table-layout: fixed; /* Membatasi lebar kolom */
-        border-collapse: collapse;
-        background: #fff;
-        font-size: 15px;
-    }
-
-    .ticket-table th, .ticket-table td {
-        border: 1px solid #e0e0e0;
-        padding: 10px 8px;
-        text-align: left;
-        vertical-align: top;
-        word-break: break-word; /* Agar isi kolom tidak melebar */
-    }
-
-    .ticket-table th {
-        background: #f5f7fa;
-        font-weight: bold;
-    }
-
-    .ticket-table tr:nth-child(even) {
-        background: #f9fbfd;
-    }
-
-    .ticket-table tr:hover {
-        background: #e3f2fd;
-    }
-
-    /* Scroll bar untuk tabel */
-    .table-container {
-        width: 100%;
-        max-width: 100%;
-        overflow-x: auto;
-    }
-
-    .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.5);
-    }
-
-    .modal-content {
-        background-color: #fff;
-        margin: 15% auto;
-        padding: 20px;
-        border-radius: 8px;
-        width: 90%;
-        max-width: 400px;
-    }
-
-    .form-group {
-        margin-bottom: 16px;
-    }
-
-    .form-control {
-        width: 100%;
-        padding: 8px;
-        border: 1px solid #ddd;
-        border-radius: 4px;
-        margin-top: 8px;
-    }
-
-    .modal-buttons {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-        margin-top: 20px;
-    }
-
-    /* Responsive design */
-    @media (max-width: 768px) {
-        .dispatch-action-buttons {
-            gap: 2px;
+        @media (max-width: 992px) {
+            .dashboard-dispatch-grid {
+                grid-template-columns: 1fr;
+            }
         }
-        
-        .btn-dispatch-action {
-            font-size: 9px;
-            padding: 3px 6px;
+
+        .stat-new {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        }
+
+        .stat-admin {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+        }
+
+        .stat-scheduled {
+            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+        }
+
+        .stat-progress {
+            background: linear-gradient(135deg, #fd7e14 0%, #dc3545 100%);
+        }
+
+        .stat-review {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            position: relative;
+        }
+
+        .stat-review::after {
+            content: '!';
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: rgba(255,255,255,0.8);
+            animation: pulse-icon 2s infinite;
+        }
+
+        @keyframes pulse-icon {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        .dispatch-workflow-info {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .dispatch-workflow-info h4 {
+            margin-top: 0;
+            color: #17a2b8;
+            font-size: 1rem;
+            margin-bottom: 15px;
         }
 
         .workflow-steps {
-            gap: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .step {
-            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
+        }
+
+        .step-number {
+            width: 24px;
+            height: 24px;
+            background-color: #17a2b8;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
         }
 
         .step-text {
-            font-size: 12px;
+            font-size: 13px;
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .dispatch-action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .btn-dispatch-action {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-forward {
+            background-color: #6f42c1;
+            color: white;
+        }
+
+        .btn-review {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-report {
+            background-color: #fd7e14;
+            color: white;
+        }
+
+        .btn-send-bor {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .btn-dispatch-action:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
         }
 
         .modal-content {
-            width: 95%;
-            margin: 1% auto;
-            padding: 20px;
+            background-color: white;
+            margin: 2% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .modal-large {
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .close:hover {
+            color: #dc3545;
         }
 
         .form-section {
-            padding: 15px;
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background-color: #f8f9fa;
         }
-    }
-    
-    .card {
-        background: #fff;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px #e0e0e0;
-        padding: 18px 24px;
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-    }
 
-    .dashboard-row {
-        display: flex;
-        gap: 24px;
-        align-items: stretch;
-    }
+        .form-section h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 8px;
+        }
 
-    .search-highlight, .search-highlight td {
-        background: #e3f2fd !important;
-    }
+        .btn-large {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .ticket-table {
+            width: 100%;
+            table-layout: fixed; 
+            border-collapse: collapse;
+            background: #fff;
+            font-size: 15px;
+        }
+
+        .ticket-table th, .ticket-table td {
+            border: 1px solid #e0e0e0;
+            padding: 10px 8px;
+            text-align: left;
+            vertical-align: top;
+            word-break: break-word; 
+        }
+
+        .ticket-table th {
+            background: #f5f7fa;
+            font-weight: bold;
+        }
+
+        .ticket-table tr:nth-child(even) {
+            background: #f9fbfd;
+        }
+
+        .ticket-table tr:hover {
+            background: #e3f2fd;
+        }
+
+        .table-container {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 15% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 8px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .dispatch-action-buttons {
+                gap: 2px;
+            }
+            
+            .btn-dispatch-action {
+                font-size: 9px;
+                padding: 3px 6px;
+            }
+
+            .workflow-steps {
+                gap: 6px;
+            }
+
+            .step {
+                padding: 6px 10px;
+            }
+
+            .step-text {
+                font-size: 12px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 1% auto;
+                padding: 20px;
+            }
+
+            .form-section {
+                padding: 15px;
+            }
+        }
+        
+        .card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px #e0e0e0;
+            padding: 18px 24px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .dashboard-row {
+            display: flex;
+            gap: 24px;
+            align-items: stretch;
+        }
+
+        .search-highlight, .search-highlight td {
+            background: #e3f2fd !important;
+        }
 
     </style>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const tbody = document.querySelector('#dispatchWorkOrderTable tbody');
-    if (!tbody) return;
-
-    const originalRows = Array.from(tbody.querySelectorAll('tr'));
-    const searchForm = document.getElementById('searchWOForm');
-    const searchInput = document.getElementById('searchWOInput');
-
-    if (!searchForm || !searchInput) return;
-
-    searchForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const searchValue = searchInput.value.trim().toLowerCase();
-        const rows = Array.from(tbody.querySelectorAll('tr'));
-
-        // Reset highlight dan urutan
-        rows.forEach(row => row.classList.remove('search-highlight'));
-        originalRows.forEach(row => tbody.appendChild(row));
-
-        if (searchValue === '') return;
-
-        // Temukan baris yang cocok
-        let foundRows = [];
-        rows.forEach(row => {
-            const woId = (row.dataset.woid || '').toLowerCase();
-            if (woId.includes(searchValue)) {
-                foundRows.push(row);
-            }
-        });
-
-        // Pindahkan baris yang cocok ke paling atas dan highlight
-        foundRows.reverse().forEach(row => {
-            row.classList.add('search-highlight');
-            tbody.insertBefore(row, tbody.firstChild);
-        });
-    });
-});
-</script>
 
 </body>
 </html>

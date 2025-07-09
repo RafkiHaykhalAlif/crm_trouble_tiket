@@ -1,13 +1,11 @@
 <?php
 include 'config/db_connect.php';
 
-// Cek apakah user sudah login dan adalah Vendor IKR
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'Vendor IKR') {
     header('Location: login.php');
     exit();
 }
 
-// Cek parameter WO ID
 if (!isset($_GET['wo_id']) || empty($_GET['wo_id'])) {
     header('Location: dashboard_vendor.php');
     exit();
@@ -16,7 +14,6 @@ if (!isset($_GET['wo_id']) || empty($_GET['wo_id'])) {
 $wo_id = (int)$_GET['wo_id'];
 $vendor_user_id = $_SESSION['user_id'];
 
-// Validasi: Pastikan WO ini milik teknisi yang login dan statusnya In Progress
 $check_sql = "SELECT 
     wo.id,
     wo.wo_code,
@@ -50,12 +47,10 @@ if (mysqli_num_rows($check_result) == 0) {
 
 $wo = mysqli_fetch_assoc($check_result);
 
-// Cek apakah sudah ada draft report
 $draft_sql = "SELECT * FROM tr_work_reports WHERE work_order_id = '$wo_id'";
 $draft_result = mysqli_query($conn, $draft_sql);
 $existing_report = mysqli_num_rows($draft_result) > 0 ? mysqli_fetch_assoc($draft_result) : null;
 
-// Parse existing data jika ada
 $equipment_data = [];
 $materials_data = [];
 if ($existing_report) {
@@ -63,7 +58,6 @@ if ($existing_report) {
     $materials_data = $existing_report['materials_used'] ? json_decode($existing_report['materials_used'], true) : [];
 }
 
-// Handle messages
 $message = '';
 if (isset($_GET['status'])) {
     switch($_GET['status']) {
@@ -79,7 +73,6 @@ if (isset($_GET['status'])) {
     }
 }
 
-// Function untuk format tanggal
 function formatTanggalIndonesia($datetime) {
     if (!$datetime) return '-';
     
@@ -120,7 +113,6 @@ function formatTanggalIndonesia($datetime) {
 
     <main class="container">
         
-        <!-- Tombol Kembali -->
         <div class="back-button-section">
             <a href="dashboard_vendor.php" class="btn-back">Kembali ke Dashboard</a>
             <a href="view_work_order.php?id=<?php echo $wo['id']; ?>" class="btn-back" style="background-color: #6c757d; margin-left: 10px;">Info WO</a>
@@ -128,7 +120,6 @@ function formatTanggalIndonesia($datetime) {
 
         <?php echo $message; ?>
 
-        <!-- Header WO Info -->
         <div class="card wo-header-card">
             <div class="wo-header">
                 <div class="wo-title">
@@ -153,11 +144,9 @@ function formatTanggalIndonesia($datetime) {
             </div>
         </div>
 
-        <!-- Form Laporan -->
         <form id="reportForm" action="proses_save_work_report.php" method="POST">
             <input type="hidden" name="wo_id" value="<?php echo $wo_id; ?>">
             
-            <!-- Basic Completion Info -->
             <div class="card">
                 <div class="form-section">
                     <h3>Informasi Penyelesaian</h3>
@@ -189,7 +178,6 @@ function formatTanggalIndonesia($datetime) {
                 </div>
             </div>
 
-            <!-- Equipment Changes -->
             <div class="card">
                 <div class="form-section">
                     <h3>Pergantian Equipment</h3>
@@ -222,7 +210,6 @@ function formatTanggalIndonesia($datetime) {
                 </div>
             </div>
 
-            <!-- Technical Measurements -->
             <div class="card">
                 <div class="form-section">
                     <h3>Pengukuran Teknis</h3>
@@ -252,7 +239,6 @@ function formatTanggalIndonesia($datetime) {
                 </div>
             </div>
 
-            <!-- Materials Used -->
             <div class="card">
                 <div class="form-section">
                     <h3>Material yang Digunakan</h3>
@@ -304,7 +290,6 @@ function formatTanggalIndonesia($datetime) {
                 </div>
             </div>
 
-            <!-- Action Buttons -->
             <div class="card">
                 <div class="action-buttons-section">
                     <div class="buttons-row">
@@ -326,256 +311,253 @@ function formatTanggalIndonesia($datetime) {
     </main>
 
     <script>
-    // Material management
-    let materialIndex = <?php echo !empty($materials_data) ? count($materials_data) : 1; ?>;
-    
-    function addMaterialRow() {
-        const container = document.getElementById('materials-container');
-        const newRow = document.createElement('div');
-        newRow.className = 'material-row';
-        newRow.innerHTML = `
-            <div class="form-row">
-                <div class="form-group">
-                    <input type="text" name="materials[${materialIndex}][name]" placeholder="Nama material">
-                </div>
-                <div class="form-group" style="width: 100px;">
-                    <input type="number" name="materials[${materialIndex}][quantity]" placeholder="Qty" min="0">
-                </div>
-                <div class="form-group" style="width: 100px;">
-                    <input type="text" name="materials[${materialIndex}][unit]" placeholder="Unit">
-                </div>
-                <div class="form-group">
-                    <input type="text" name="materials[${materialIndex}][notes]" placeholder="Catatan">
-                </div>
-                <button type="button" onclick="removeMaterialRow(this)" class="btn-remove">×</button>
-            </div>
-        `;
-        container.appendChild(newRow);
-        materialIndex++;
-    }
-
-    function removeMaterialRow(button) {
-        button.closest('.material-row').remove();
-    }
-
-    function confirmSubmit() {
-    return confirm('Yakin ingin submit laporan ke Dispatch?\n\nSetelah disubmit, laporan akan dikirim ke Dispatch untuk review sebelum ke BOR.');
-    }
-
-    // Auto-save draft setiap 2 menit
-    setInterval(function() {
-        const formData = new FormData(document.getElementById('reportForm'));
-        formData.set('action', 'auto_save');
+        let materialIndex = <?php echo !empty($materials_data) ? count($materials_data) : 1; ?>;
         
-        fetch('proses_save_work_report.php', {
-            method: 'POST',
-            body: formData
-        }).then(response => {
-            if (response.ok) {
-                console.log('Auto-save berhasil');
-                // Bisa tambahin indicator visual
-            }
-        }).catch(error => {
-            console.log('Auto-save gagal:', error);
-        });
-    }, 120000); // 2 menit
+        function addMaterialRow() {
+            const container = document.getElementById('materials-container');
+            const newRow = document.createElement('div');
+            newRow.className = 'material-row';
+            newRow.innerHTML = `
+                <div class="form-row">
+                    <div class="form-group">
+                        <input type="text" name="materials[${materialIndex}][name]" placeholder="Nama material">
+                    </div>
+                    <div class="form-group" style="width: 100px;">
+                        <input type="number" name="materials[${materialIndex}][quantity]" placeholder="Qty" min="0">
+                    </div>
+                    <div class="form-group" style="width: 100px;">
+                        <input type="text" name="materials[${materialIndex}][unit]" placeholder="Unit">
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="materials[${materialIndex}][notes]" placeholder="Catatan">
+                    </div>
+                    <button type="button" onclick="removeMaterialRow(this)" class="btn-remove">×</button>
+                </div>
+            `;
+            container.appendChild(newRow);
+            materialIndex++;
+        }
+
+        function removeMaterialRow(button) {
+            button.closest('.material-row').remove();
+        }
+
+        function confirmSubmit() {
+        return confirm('Yakin ingin submit laporan ke Dispatch?\n\nSetelah disubmit, laporan akan dikirim ke Dispatch untuk review sebelum ke BOR.');
+        }
+
+        setInterval(function() {
+            const formData = new FormData(document.getElementById('reportForm'));
+            formData.set('action', 'auto_save');
+            
+            fetch('proses_save_work_report.php', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.ok) {
+                    console.log('Auto-save berhasil');
+                }
+            }).catch(error => {
+                console.log('Auto-save gagal:', error);
+            });
+        }, 120000); 
     </script>
 
     <style>
-    .user-role-vendor {
-        background-color: #28a745 !important;
-    }
-
-    .wo-header-card {
-        margin-bottom: 25px;
-        border-left: 4px solid #28a745;
-    }
-
-    .wo-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 20px;
-    }
-
-    .wo-title h2 {
-        margin: 0 0 10px 0;
-        color: #28a745;
-    }
-
-    .wo-meta {
-        display: flex;
-        gap: 20px;
-        flex-wrap: wrap;
-        font-size: 14px;
-        color: #6c757d;
-    }
-
-    .draft-status {
-        flex-shrink: 0;
-    }
-
-    .problem-summary {
-        background-color: #f8f9fa;
-        padding: 15px;
-        border-radius: 6px;
-        border-left: 3px solid #17a2b8;
-    }
-
-    .problem-summary h4 {
-        margin-top: 0;
-        color: #17a2b8;
-    }
-
-    .form-section {
-        padding: 0;
-    }
-
-    .form-section h3 {
-        margin-bottom: 20px;
-        color: #495057;
-        border-bottom: 2px solid #e9ecef;
-        padding-bottom: 10px;
-    }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        margin-bottom: 15px;
-    }
-
-    @media (max-width: 768px) {
-        .form-row {
-            grid-template-columns: 1fr;
+        .user-role-vendor {
+            background-color: #28a745 !important;
         }
-        
+
+        .wo-header-card {
+            margin-bottom: 25px;
+            border-left: 4px solid #28a745;
+        }
+
+        .wo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .wo-title h2 {
+            margin: 0 0 10px 0;
+            color: #28a745;
+        }
+
         .wo-meta {
-            flex-direction: column;
-            gap: 8px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 14px;
+            color: #6c757d;
         }
-    }
 
-    .material-row {
-        margin-bottom: 15px;
-        padding: 15px;
-        border: 1px solid #dee2e6;
-        border-radius: 6px;
-        background-color: white;
-    }
+        .draft-status {
+            flex-shrink: 0;
+        }
 
-    .material-row .form-row {
-        grid-template-columns: 2fr 100px 100px 2fr 40px;
-        align-items: center;
-        margin-bottom: 0;
-    }
+        .problem-summary {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid #17a2b8;
+        }
 
-    .btn-small {
-        padding: 8px 15px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-    }
+        .problem-summary h4 {
+            margin-top: 0;
+            color: #17a2b8;
+        }
 
-    .btn-small:hover {
-        background-color: #218838;
-    }
+        .form-section {
+            padding: 0;
+        }
 
-    .btn-remove {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 35px;
-        height: 35px;
-        cursor: pointer;
-        font-size: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
+        .form-section h3 {
+            margin-bottom: 20px;
+            color: #495057;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+        }
 
-    .btn-remove:hover {
-        background-color: #c82333;
-    }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
 
-    .action-buttons-section {
-        text-align: center;
-        padding: 20px 0;
-    }
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .wo-meta {
+                flex-direction: column;
+                gap: 8px;
+            }
+        }
 
-    .buttons-row {
-        display: flex;
-        gap: 15px;
-        justify-content: center;
-        margin-bottom: 15px;
-    }
+        .material-row {
+            margin-bottom: 15px;
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            background-color: white;
+        }
 
-    @media (max-width: 768px) {
-        .buttons-row {
-            flex-direction: column;
+        .material-row .form-row {
+            grid-template-columns: 2fr 100px 100px 2fr 40px;
             align-items: center;
+            margin-bottom: 0;
         }
-        
-        .buttons-row .btn {
+
+        .btn-small {
+            padding: 8px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .btn-small:hover {
+            background-color: #218838;
+        }
+
+        .btn-remove {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-remove:hover {
+            background-color: #c82333;
+        }
+
+        .action-buttons-section {
+            text-align: center;
+            padding: 20px 0;
+        }
+
+        .buttons-row {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .buttons-row {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .buttons-row .btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background-color: #5a6268;
+        }
+
+        .btn-primary {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #218838;
+        }
+
+        .help-text {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            color: #495057;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
             width: 100%;
-            max-width: 300px;
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: border-color 0.15s ease-in-out;
+            box-sizing: border-box;
         }
-    }
 
-    .btn-secondary {
-        background-color: #6c757d;
-        color: white;
-    }
-
-    .btn-secondary:hover {
-        background-color: #5a6268;
-    }
-
-    .btn-primary {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-primary:hover {
-        background-color: #218838;
-    }
-
-    .help-text {
-        color: #6c757d;
-        font-style: italic;
-        text-align: center;
-    }
-
-    .form-group label {
-        font-weight: 600;
-        color: #495057;
-        margin-bottom: 8px;
-        display: block;
-    }
-
-    .form-group input,
-    .form-group textarea,
-    .form-group select {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-        font-size: 14px;
-        transition: border-color 0.15s ease-in-out;
-        box-sizing: border-box;
-    }
-
-    .form-group input:focus,
-    .form-group textarea:focus,
-    .form-group select:focus {
-        border-color: #80bdff;
-        outline: 0;
-        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-    }
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
     </style>
 
 </body>

@@ -3,10 +3,6 @@ include 'config/db_connect.php';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
-    // --- PERUBAHAN 1: Hapus pengambilan ID Pelanggan dari form ---
-    // $customerIdNumber = mysqli_real_escape_string($conn, $_POST['customer_id_number']); // Baris ini dihapus
-
-    // Ambil data lainnya dari form
     $fullName = mysqli_real_escape_string($conn, $_POST['full_name']);
     $provinsi = mysqli_real_escape_string($conn, $_POST['provinsi']);
     $kota = mysqli_real_escape_string($conn, $_POST['kota']);
@@ -21,17 +17,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     $complain_channel = mysqli_real_escape_string($conn, $_POST['complain_channel']);
 
-    // --- PERUBAHAN 2: Buat ID Pelanggan unik secara otomatis ---
-    // Kita gunakan prefix 'CUST-' diikuti dengan angka timestamp unik saat ini.
     $customerIdNumber = 'CUST-' . time();
 
-    // Cek apakah pelanggan dengan email atau no. telp yang sama sudah ada
-    // Ini untuk mencegah duplikasi data jika pelanggan yang sama melapor lagi
     $check_sql = "SELECT id FROM ms_customers WHERE email = '$email' OR phone_number = '$phoneNumber'";
     $check_result = mysqli_query($conn, $check_sql);
     
     if (mysqli_num_rows($check_result) > 0) {
-        // Jika pelanggan sudah ada, kita update datanya dan ambil ID-nya
         $existing_customer = mysqli_fetch_assoc($check_result);
         $last_customer_id = $existing_customer['id'];
 
@@ -43,14 +34,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                          WHERE id = '$last_customer_id'";
         mysqli_query($conn, $sql_customer);
     } else {
-        // Jika pelanggan belum ada, buat data baru
         $sql_customer = "INSERT INTO ms_customers (customer_id_number, full_name, address, phone_number, email, provinsi, kota) 
                          VALUES ('$customerIdNumber', '$fullName', '$address', '$phoneNumber', '$email', '$provinsi', '$kota')";
         mysqli_query($conn, $sql_customer);
         $last_customer_id = mysqli_insert_id($conn);
     }
 
-    // --- Proses pembuatan tiket (tidak ada perubahan di sini) ---
     if ($last_customer_id) {
         $ticketCode = 'TICKET-' . date('Ymd') . '-' . strtoupper(uniqid());
 

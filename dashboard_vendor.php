@@ -1,22 +1,18 @@
 <?php
 include 'config/db_connect.php';
 
-// --- PENJAGA HALAMAN ---
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// Cek apakah user adalah Vendor IKR, kalau bukan redirect ke dashboard biasa
 if ($_SESSION['user_role'] !== 'Vendor IKR') {
     header('Location: dashboard.php');
     exit();
 }
-// --- AKHIR DARI PENJAGA HALAMAN ---
 
 $vendor_user_id = $_SESSION['user_id'];
 
-// --- AMBIL DATA WORK ORDER YANG DI-ASSIGN KE TEKNISI INI ---
 $sql_get_my_work_orders = "SELECT 
     wo.id,
     wo.wo_code,
@@ -73,7 +69,6 @@ ORDER BY
 $result_work_orders = mysqli_query($conn, $sql_get_my_work_orders);
 $work_orders = mysqli_fetch_all($result_work_orders, MYSQLI_ASSOC);
 
-// --- STATISTIK DASHBOARD VENDOR IKR ---
 $sql_stats = "SELECT 
     SUM(CASE WHEN wo.status = 'Scheduled' AND DATE(wo.scheduled_visit_date) = CURDATE() THEN 1 ELSE 0 END) as today_visits,
     SUM(CASE WHEN wo.status = 'Scheduled' AND wo.scheduled_visit_date > NOW() THEN 1 ELSE 0 END) as upcoming_visits,
@@ -86,7 +81,6 @@ WHERE wo.assigned_to_vendor_id = '$vendor_user_id'";
 $result_stats = mysqli_query($conn, $sql_stats);
 $stats = mysqli_fetch_assoc($result_stats);
 
-// --- Cek pesan dari proses ---
 $message = '';
 if (isset($_GET['status'])) {
     switch($_GET['status']) {
@@ -120,7 +114,6 @@ if (isset($_GET['status'])) {
     }
 }
 
-// Function untuk format tanggal Indonesia
 function formatTanggalIndonesia($datetime) {
     if (!$datetime) return '-';
     
@@ -180,7 +173,6 @@ function getStatusPriority($wo) {
     <main class="container">
         <?php echo $message; ?>
         
-        <!-- Statistik Dashboard IKR -->
         <div class="stats-grid">
             <div class="stat-card stat-today">
                 <div class="stat-number"><?php echo $stats['today_visits']; ?></div>
@@ -208,7 +200,6 @@ function getStatusPriority($wo) {
 
         <div class="dashboard-vendor-grid">
             
-            <!-- Quick Actions IKR -->
             <div class="vendor-action-column">
                 <section class="card">
                     <h3>Quick Actions</h3>
@@ -241,7 +232,6 @@ function getStatusPriority($wo) {
                 </section>
             </div>
 
-            <!-- Daftar Work Orders Teknisi -->
             <div class="work-order-list-column">
                 <section class="card">
                     <h3>Work Orders Saya</h3>
@@ -465,7 +455,6 @@ function getStatusPriority($wo) {
         </div>
     </main>
 
-    <!-- Modal untuk Start Work -->
     <div id="startModal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="closeStartModal()">&times;</span>
@@ -498,7 +487,6 @@ function getStatusPriority($wo) {
         </div>
     </div>
 
-    <!-- Enhanced Modal untuk Complete Work Order -->
     <div id="completeModal" class="modal" style="display: none;">
         <div class="modal-content modal-large">
             <span class="close" onclick="closeCompleteModal()">&times;</span>
@@ -506,7 +494,6 @@ function getStatusPriority($wo) {
             <form id="completeForm" action="proses_complete_work_enhanced.php" method="POST">
                 <input type="hidden" id="completeWoId" name="wo_id">
                 
-                <!-- Basic Completion Info -->
                 <div class="form-section">
                     <h4>Informasi Penyelesaian</h4>
                     <div class="form-group">
@@ -527,7 +514,6 @@ function getStatusPriority($wo) {
                     </div>
                 </div>
 
-                <!-- Equipment Changes -->
                 <div class="form-section">
                     <h4>🔧 Pergantian Equipment</h4>
                     
@@ -550,7 +536,6 @@ function getStatusPriority($wo) {
                     </div>
                 </div>
 
-                <!-- Technical Measurements -->
                 <div class="form-section">
                     <h4>Pengukuran Teknis</h4>
                     
@@ -575,7 +560,6 @@ function getStatusPriority($wo) {
                     </div>
                 </div>
 
-                <!-- Materials Used -->
                 <div class="form-section">
                     <h4>Material yang Digunakan</h4>
                     <div id="materials-container">
@@ -599,7 +583,6 @@ function getStatusPriority($wo) {
                     <button type="button" onclick="addMaterialRow()" class="btn-small">+ Tambah Material</button>
                 </div>
 
-                <!-- Customer Feedback -->
                 <div class="form-section">
                     <h4>Feedback Customer</h4>
 
@@ -626,7 +609,6 @@ function getStatusPriority($wo) {
         </div>
     </div>
 
-    <!-- Modal untuk Pending Work Order -->
     <div id="pendingModal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="closePendingModal()">&times;</span>
@@ -643,567 +625,544 @@ function getStatusPriority($wo) {
     </div>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-    const tbody = document.querySelector('#vendorWorkOrderTable tbody');
-    if (!tbody) {
-        return;
-    }
-    const originalRows = Array.from(tbody.querySelectorAll('tr'));
+        document.addEventListener('DOMContentLoaded', function() {
+        const tbody = document.querySelector('#vendorWorkOrderTable tbody');
+        if (!tbody) {
+            return;
+        }
+        const originalRows = Array.from(tbody.querySelectorAll('tr'));
+        const searchForm = document.getElementById('searchWOForm');
+        const searchInput = document.getElementById('searchWOInput');
 
-    const searchForm = document.getElementById('searchWOForm');
-    const searchInput = document.getElementById('searchWOInput');
+        if (!searchForm || !searchInput) return;
 
-    if (!searchForm || !searchInput) return;
+            searchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const searchValue = searchInput.value.trim().toLowerCase();
+                const rows = Array.from(tbody.querySelectorAll('tr'));
 
-    searchForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const searchValue = searchInput.value.trim().toLowerCase();
-        const rows = Array.from(tbody.querySelectorAll('tr'));
+                rows.forEach(row => row.style.background = '');
+                originalRows.forEach(row => tbody.appendChild(row));
 
-        // Reset highlight dan urutan
-        rows.forEach(row => row.style.background = '');
-        originalRows.forEach(row => tbody.appendChild(row));
+                if (searchValue === '') return;
 
-        if (searchValue === '') return;
+                let foundRows = [];
+                rows.forEach(row => {
+                    const woId = (row.dataset.woid || '').toLowerCase();
+                    if (woId.includes(searchValue)) {
+                        foundRows.push(row);
+                    }
+                });
 
-        // Temukan baris yang cocok
-        let foundRows = [];
-        rows.forEach(row => {
-            const woId = (row.dataset.woid || '').toLowerCase();
-            if (woId.includes(searchValue)) {
-                foundRows.push(row);
-            }
+                foundRows.reverse().forEach(row => {
+                    rows.forEach(row => row.classList.remove('search-highlight'));
+                    row.classList.add('search-highlight');
+                    tbody.insertBefore(row, tbody.firstChild);
+                });
+            });
+
         });
+        
+        function startWork(woId) {
+            document.getElementById('startWoId').value = woId;
+            document.getElementById('startModal').style.display = 'block';
+        }
 
-        // Pindahkan baris yang cocok ke paling atas dan highlight
-        foundRows.reverse().forEach(row => {
-            // Reset highlight
-            rows.forEach(row => row.classList.remove('search-highlight'));
-            // Highlight hasil
-            row.classList.add('search-highlight');
-            tbody.insertBefore(row, tbody.firstChild);
-        });
-    });
+        function closeStartModal() {
+            document.getElementById('startModal').style.display = 'none';
+        }
 
+        function addReport(woId) {
+            window.location.href = 'create_work_report.php?wo_id=' + woId;
+        }
     
-});
+        function showAllWO() {
+            const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
+            rows.forEach(row => row.style.display = '');
+        }
+
+        function showCompletedWO() {
+            const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                const status = (row.dataset.status || '').trim().toLowerCase();
+                if (
+                    status === 'closed by bor' ||
+                    status === 'completed by technician'
+                ) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showInProgressWO() {
+            const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                const status = (row.dataset.status || '').trim().toLowerCase();
+                if (status === 'in progress') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showTodayWO() {
+            const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                const status = (row.dataset.status || '').trim().toLowerCase();
+                if (status === 'today') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showUpcomingWO() {
+            const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                const status = (row.dataset.status || '').trim().toLowerCase();
+                if (status === 'upcoming') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showUnderReviewWO() {
+            const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                const status = (row.dataset.status || '').trim().toLowerCase();
+                if (
+                    status === 'completed by technician' ||
+                    status === 'waiting for bor review'
+                ) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showPendingModal(woId) {
+            document.getElementById('pendingWoId').value = woId;
+            document.getElementById('pendingModal').style.display = 'block';
+        }
+        function closePendingModal() {
+            document.getElementById('pendingModal').style.display = 'none';
+        }
+        
     </script>
 
     <style>
     
-    body {
-    background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
-    min-height: 100vh;
-    margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    }
-    
-    /* Vendor IKR specific styles */
-    .user-role-vendor {
-        background-color: #28a745 !important;
-    }
-
-    .dashboard-vendor-grid {
-        display: grid;
-        grid-template-columns: 1fr 2fr;
-        gap: 30px;
-    }
-
-    @media (max-width: 992px) {
-        .dashboard-vendor-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    /* New stat card colors for vendor */
-    .stat-today {
-        background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
-    }
-
-    .stat-progress {
-        background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
-    }
-
-    .stat-upcoming {
-        background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
-    }
-
-    .stat-completed-month {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    }
-
-    .stat-overdue {
-        background: linear-gradient(135deg, #dc3545 0%, #6f42c1 100%);
-    }
-
-    /* Work Order row highlighting */
-    .wo-row-today {
-        background-color: #fff5f5 !important;
-        border-left: 4px solid #dc3545;
-    }
-
-    .wo-row-in-progress {
-        background-color: #fff8e6 !important;
-        border-left: 4px solid #fd7e14;
-        animation: working 3s ease-in-out infinite;
-    }
-
-    @keyframes working {
-        0% { border-left-color: #fd7e14; }
-        50% { border-left-color: #ffc107; }
-        100% { border-left-color: #fd7e14; }
-    }
-
-    .wo-row-overdue {
-        background-color: #fff5f5 !important;
-        border-left: 4px solid #dc3545;
-        animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-        0% { border-left-color: #dc3545; }
-        50% { border-left-color: #fd7e14; }
-        100% { border-left-color: #dc3545; }
-    }
-
-    .wo-row-upcoming {
-        background-color: #f0f8ff !important;
-        border-left: 4px solid #17a2b8;
-    }
-
-    .wo-row-completed {
-        background-color: #f8fff8 !important;
-        border-left: 4px solid #28a745;
-    }
-
-    /* Enhanced Modal styles */
-    .modal {
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.5);
-        overflow-y: auto;
-    }
-
-    .modal-content {
-        background-color: white;
-        margin: 5% auto;
-        padding: 30px;
-        border-radius: 10px;
-        width: 90%;
-        max-width: 500px;
-        position: relative;
-    }
-
-    .modal-large {
-        max-width: 800px;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    .close {
-        position: absolute;
-        right: 15px;
-        top: 15px;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-        z-index: 1001;
-    }
-
-    .close:hover {
-        color: #dc3545;
-    }
-
-    /* Form sections */
-    .form-section {
-        margin-bottom: 25px;
-        padding: 20px;
-        border: 1px solid #e9ecef;
-        border-radius: 8px;
-        background-color: #f8f9fa;
-    }
-
-    .form-section h4 {
-        margin-top: 0;
-        margin-bottom: 15px;
-        color: #495057;
-        font-size: 1.1rem;
-        border-bottom: 2px solid #dee2e6;
-        padding-bottom: 8px;
-    }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }
-
-    @media (max-width: 768px) {
-        .form-row {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    /* Material rows */
-    .material-row {
-        margin-bottom: 10px;
-        padding: 10px;
-        border: 1px solid #dee2e6;
-        border-radius: 5px;
-        background-color: white;
-        position: relative;
-    }
-
-    .material-row .form-row {
-        grid-template-columns: 2fr 80px 80px 2fr 40px;
-        align-items: center;
-    }
-
-    .btn-small {
-        padding: 8px 12px;
-        background-color: #28a745;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 12px;
-        margin-top: 10px;
-    }
-
-    .btn-small:hover {
-        background-color: #218838;
-    }
-
-    .btn-remove {
-        background-color: #dc3545;
-        color: white;
-        border: none;
-        border-radius: 50%;
-        width: 30px;
-        height: 30px;
-        cursor: pointer;
-        font-size: 16px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .btn-remove:hover {
-        background-color: #c82333;
-    }
-
-    .btn-large {
-        padding: 15px 30px;
-        font-size: 16px;
-        font-weight: 600;
-        margin-top: 20px;
-        width: 100%;
-    }
-
-    /* Vendor action buttons */
-    .vendor-action-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        width: 100%;
-    }
-
-    .btn-vendor-action {
-        padding: 5px 10px;
-        border: none;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 500;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-    }
-
-    .btn-start {
-        background-color: #007bff;
-        color: white;
-    }
-
-    .btn-start:hover {
-        background-color: #0056b3;
-        transform: scale(1.05);
-    }
-
-    .btn-complete {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-complete:hover {
-        background-color: #218838;
-        transform: scale(1.05);
-    }
-
-    .btn-report {
-        background-color: #ffc107;
-        color: #212529;
-    }
-
-    .btn-report:hover {
-        background-color: #e0a800;
-        transform: scale(1.05);
-    }
-
-    .vendor-info-box {
-        background-color: #f8f9fa;
-        padding: 15px;
-        border-radius: 6px;
-        border-left: 4px solid #28a745;
-        margin-top: 20px;
-    }
-
-    .vendor-info-box h4 {
-        margin-top: 0;
-        color: #28a745;
-        font-size: 1rem;
-    }
-
-    .vendor-info-box p {
-        margin: 8px 0;
-        font-size: 14px;
-    }
-
-    .customer-info {
-        margin-bottom: 8px;
-    }
-
-    .ticket-problem {
-        font-size: 12px;
-    }
-
-    /* Input styling improvements */
-    .form-group input[type="text"],
-    .form-group input[type="number"],
-    .form-group textarea,
-    .form-group select {
-        border: 1px solid #ced4da;
-        border-radius: 4px;
-        padding: 8px 12px;
-        font-size: 14px;
-        transition: border-color 0.15s ease-in-out;
-    }
-
-    .form-group input:focus,
-    .form-group textarea:focus,
-    .form-group select:focus {
-        border-color: #80bdff;
-        outline: 0;
-        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-    }
-
-    .text-muted {
-        font-size: 12px;
-        color: #6c757d;
-        font-style: italic;
-    }
-
-    /* Responsive untuk Vendor Dashboard */
-    @media (max-width: 768px) {
-        .vendor-action-buttons {
-            gap: 4px;
+        body {
+        background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+        min-height: 100vh;
+        margin: 0;
+        font-family: 'Segoe UI', Arial, sans-serif;
         }
         
-        .btn-vendor-action {
-            font-size: 10px;
-            padding: 4px 8px;
+        .user-role-vendor {
+            background-color: #28a745 !important;
+        }
+
+        .dashboard-vendor-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 992px) {
+            .dashboard-vendor-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .stat-today {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .stat-progress {
+            background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
+        }
+
+        .stat-upcoming {
+            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+        }
+
+        .stat-completed-month {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .stat-overdue {
+            background: linear-gradient(135deg, #dc3545 0%, #6f42c1 100%);
+        }
+
+        .wo-row-today {
+            background-color: #fff5f5 !important;
+            border-left: 4px solid #dc3545;
+        }
+
+        .wo-row-in-progress {
+            background-color: #fff8e6 !important;
+            border-left: 4px solid #fd7e14;
+            animation: working 3s ease-in-out infinite;
+        }
+
+        @keyframes working {
+            0% { border-left-color: #fd7e14; }
+            50% { border-left-color: #ffc107; }
+            100% { border-left-color: #fd7e14; }
+        }
+
+        .wo-row-overdue {
+            background-color: #fff5f5 !important;
+            border-left: 4px solid #dc3545;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { border-left-color: #dc3545; }
+            50% { border-left-color: #fd7e14; }
+            100% { border-left-color: #dc3545; }
+        }
+
+        .wo-row-upcoming {
+            background-color: #f0f8ff !important;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .wo-row-completed {
+            background-color: #f8fff8 !important;
+            border-left: 4px solid #28a745;
+        }
+
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            overflow-y: auto;
         }
 
         .modal-content {
-            width: 95%;
-            margin: 2% auto;
-            padding: 20px;
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
         }
 
-        .material-row .form-row {
-            grid-template-columns: 1fr;
-            gap: 8px;
+        .modal-large {
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .close:hover {
+            color: #dc3545;
         }
 
         .form-section {
+            margin-bottom: 25px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            background-color: #f8f9fa;
+        }
+
+        .form-section h4 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 1.1rem;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 8px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .material-row {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            background-color: white;
+            position: relative;
+        }
+
+        .material-row .form-row {
+            grid-template-columns: 2fr 80px 80px 2fr 40px;
+            align-items: center;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+
+        .btn-small:hover {
+            background-color: #218838;
+        }
+
+        .btn-remove {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-remove:hover {
+            background-color: #c82333;
+        }
+
+        .btn-large {
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .vendor-action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            width: 100%;
+        }
+
+        .btn-vendor-action {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-start {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-start:hover {
+            background-color: #0056b3;
+            transform: scale(1.05);
+        }
+
+        .btn-complete {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-complete:hover {
+            background-color: #218838;
+            transform: scale(1.05);
+        }
+
+        .btn-report {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .btn-report:hover {
+            background-color: #e0a800;
+            transform: scale(1.05);
+        }
+
+        .vendor-info-box {
+            background-color: #f8f9fa;
             padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #28a745;
+            margin-top: 20px;
         }
-    }
 
-    /* Fix checkbox styling */
-    .checkbox-group {
-        margin-bottom: 20px;
-    }
-
-    .checkbox-label {
-        display: flex !important;
-        align-items: flex-start !important;
-        gap: 12px;
-        cursor: pointer;
-        font-weight: normal !important;
-        margin-bottom: 0 !important;
-    }
-
-    .checkbox-label input[type="checkbox"] {
-        width: auto !important;
-        height: auto !important;
-        margin: 0 !important;
-        flex-shrink: 0;
-        margin-top: 3px;
-    }
-
-    .checkbox-text {
-        flex: 1;
-        line-height: 1.4;
-        color: #495057;
-    }
-
-    .checkbox-label:hover .checkbox-text {
-        color: #007bff;
-    }
-
-    .search-highlight, .search-highlight td {
-        background: #e3f2fd !important;
-    }
-
-    /* Tambahkan ke file CSS Anda */
-.ticket-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 12px;
-    background: #fff;
-    border-radius: 8px;
-    overflow: hidden;
-    font-size: 15px;
-}
-
-.ticket-table th, .ticket-table td {
-    border: 1px solid #e0e0e0;
-    padding: 10px 14px;
-    text-align: left;
-    vertical-align: top;
-}
-
-.ticket-table th {
-    background: #f5f7fa;
-    font-weight: bold;
-}
-
-.ticket-table tr:nth-child(even) {
-    background: #f9fbfd;
-}
-
-.ticket-table tr:hover {
-    background: #e3f2fd;
-}
-
- </style>
-
-
-<script>
-
-function startWork(woId) {
-    document.getElementById('startWoId').value = woId;
-    document.getElementById('startModal').style.display = 'block';
-}
-
-function closeStartModal() {
-    document.getElementById('startModal').style.display = 'none';
-}
-
-function addReport(woId) {
-    window.location.href = 'create_work_report.php?wo_id=' + woId;
-}
-    </script>
-
-    <script>
-function showAllWO() {
-    const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
-    rows.forEach(row => row.style.display = '');
-}
-
-function showCompletedWO() {
-    const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
-    rows.forEach(row => {
-        const status = (row.dataset.status || '').trim().toLowerCase();
-        if (
-            status === 'closed by bor' ||
-            status === 'completed by technician'
-        ) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
+        .vendor-info-box h4 {
+            margin-top: 0;
+            color: #28a745;
+            font-size: 1rem;
         }
-    });
-}
 
-function showInProgressWO() {
-    const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
-    rows.forEach(row => {
-        const status = (row.dataset.status || '').trim().toLowerCase();
-        if (status === 'in progress') {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
+        .vendor-info-box p {
+            margin: 8px 0;
+            font-size: 14px;
         }
-    });
-}
 
-function showTodayWO() {
-    const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
-    rows.forEach(row => {
-        const status = (row.dataset.status || '').trim().toLowerCase();
-        if (status === 'today') {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
+        .customer-info {
+            margin-bottom: 8px;
         }
-    });
-}
 
-function showUpcomingWO() {
-    const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
-    rows.forEach(row => {
-        const status = (row.dataset.status || '').trim().toLowerCase();
-        if (status === 'upcoming') {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
+        .ticket-problem {
+            font-size: 12px;
         }
-    });
-}
 
-function showUnderReviewWO() {
-    const rows = document.querySelectorAll('#vendorWorkOrderTable tbody tr');
-    rows.forEach(row => {
-        const status = (row.dataset.status || '').trim().toLowerCase();
-        if (
-            status === 'completed by technician' ||
-            status === 'waiting for bor review'
-        ) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group textarea,
+        .form-group select {
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 14px;
+            transition: border-color 0.15s ease-in-out;
         }
-    });
-}
 
-function showPendingModal(woId) {
-    document.getElementById('pendingWoId').value = woId;
-    document.getElementById('pendingModal').style.display = 'block';
-}
-function closePendingModal() {
-    document.getElementById('pendingModal').style.display = 'none';
-}
-</script>
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            border-color: #80bdff;
+            outline: 0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        .text-muted {
+            font-size: 12px;
+            color: #6c757d;
+            font-style: italic;
+        }
+
+        @media (max-width: 768px) {
+            .vendor-action-buttons {
+                gap: 4px;
+            }
+            
+            .btn-vendor-action {
+                font-size: 10px;
+                padding: 4px 8px;
+            }
+
+            .modal-content {
+                width: 95%;
+                margin: 2% auto;
+                padding: 20px;
+            }
+
+            .material-row .form-row {
+                grid-template-columns: 1fr;
+                gap: 8px;
+            }
+
+            .form-section {
+                padding: 15px;
+            }
+        }
+
+        .checkbox-group {
+            margin-bottom: 20px;
+        }
+
+        .checkbox-label {
+            display: flex !important;
+            align-items: flex-start !important;
+            gap: 12px;
+            cursor: pointer;
+            font-weight: normal !important;
+            margin-bottom: 0 !important;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: auto !important;
+            height: auto !important;
+            margin: 0 !important;
+            flex-shrink: 0;
+            margin-top: 3px;
+        }
+
+        .checkbox-text {
+            flex: 1;
+            line-height: 1.4;
+            color: #495057;
+        }
+
+        .checkbox-label:hover .checkbox-text {
+            color: #007bff;
+        }
+
+        .search-highlight, .search-highlight td {
+            background: #e3f2fd !important;
+        }
+
+        .ticket-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 15px;
+        }
+
+        .ticket-table th, .ticket-table td {
+            border: 1px solid #e0e0e0;
+            padding: 10px 14px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .ticket-table th {
+            background: #f5f7fa;
+            font-weight: bold;
+        }
+
+        .ticket-table tr:nth-child(even) {
+            background: #f9fbfd;
+        }
+
+        .ticket-table tr:hover {
+            background: #e3f2fd;
+        }
+
+    </style>
 
 </body>
 </html>

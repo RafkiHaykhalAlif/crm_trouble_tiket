@@ -1,32 +1,27 @@
 <?php
 include 'config/db_connect.php';
 
-// Cek apakah user sudah login dan adalah Vendor IKR
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'Vendor IKR') {
     header('Location: login.php');
     exit();
 }
 
-// Cek apakah form di-submit dengan method POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: dashboard_vendor.php');
     exit();
 }
 
-// Ambil data dari form
 $wo_id = (int)$_POST['wo_id'];
 $completion_status = mysqli_real_escape_string($conn, $_POST['completion_status']);
 $visit_report = mysqli_real_escape_string($conn, $_POST['visit_report']);
 $vendor_user_id = $_SESSION['user_id'];
 $current_time = date('Y-m-d H:i:s');
 
-// Validasi input
 if (empty($wo_id) || empty($completion_status) || empty($visit_report)) {
     header('Location: dashboard_vendor.php?status=error_missing_data');
     exit();
 }
 
-// Validasi: Pastikan WO exists dan di-assign ke teknisi ini
 $check_sql = "SELECT 
     wo.id, 
     wo.wo_code, 
@@ -50,7 +45,6 @@ if (mysqli_num_rows($check_result) == 0) {
 
 $wo_data = mysqli_fetch_assoc($check_result);
 
-// Tentukan status ticket berdasarkan completion status
 $ticket_status = '';
 switch($completion_status) {
     case 'Solved':
@@ -65,11 +59,9 @@ switch($completion_status) {
         $ticket_status = 'Closed - Unsolved';
 }
 
-// Mulai transaksi database
 mysqli_autocommit($conn, FALSE);
 
 try {
-    // 1. Update Work Order status ke Completed dan simpan report
     $update_wo_sql = "UPDATE tr_work_orders SET 
                       status = 'Completed',
                       visit_report = '$visit_report'
@@ -79,7 +71,6 @@ try {
         throw new Exception("Gagal update Work Order: " . mysqli_error($conn));
     }
 
-    // 2. Update status ticket sesuai hasil pekerjaan
     $update_ticket_sql = "UPDATE tr_tickets SET 
                           status = '$ticket_status',
                           closed_at = '$current_time'
@@ -89,7 +80,6 @@ try {
         throw new Exception("Gagal update status ticket: " . mysqli_error($conn));
     }
 
-    // 3. Tambahkan record ke tr_ticket_updates untuk tracking
     $status_description = '';
     switch($completion_status) {
         case 'Solved':
@@ -115,25 +105,19 @@ try {
         throw new Exception("Gagal mencatat aktivitas completion: " . mysqli_error($conn));
     }
 
-    // Commit transaksi
     mysqli_commit($conn);
     
-    // Redirect dengan pesan sukses
     header('Location: dashboard_vendor.php?status=completed');
     exit();
 
 } catch (Exception $e) {
-    // Rollback jika ada error
-    mysqli_rollback($e);
-    
-    // Log error untuk debugging
+    mysqli_rollback($conn);
+
     error_log("Error completing WO: " . $e->getMessage());
     
-    // Redirect dengan pesan error
     header('Location: dashboard_vendor.php?status=error_complete');
     exit();
 }
 
-// Kembalikan autocommit ke true
 mysqli_autocommit($conn, TRUE);
 ?>

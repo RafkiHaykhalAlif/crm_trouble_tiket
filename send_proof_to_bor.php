@@ -10,14 +10,13 @@ if(empty($wo_id)) {
 }
 
 try {
-    // PERBAIKAN: Gunakan field 'id' bukan 'wo_id'
     $sql = "UPDATE tr_work_orders SET 
             status = 'Waiting For BOR Review',
             reviewed_at = NOW()
             WHERE id = ?";
     
     $stmt = $conn->prepare($sql);
-    $stmt->bind_param("i", $wo_id);  // 'i' untuk integer
+    $stmt->bind_param("i", $wo_id);  
     
     if($stmt->execute()) {
         if($stmt->affected_rows > 0) {

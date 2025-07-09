@@ -1,45 +1,34 @@
 <?php
-// 1. Panggil jembatan koneksi ke database
 include 'config/db_connect.php';
 
 $error_message = '';
 
-// 2. Cek apakah pengguna menekan tombol login (form di-submit)
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
-    // 3. Ambil data yang diketik pengguna dari form
     $username = mysqli_real_escape_string($conn, $_POST['username']);
     $password = $_POST['password'];
 
-    // 4. Buat query untuk mencari pengguna dengan username yang cocok
     $sql = "SELECT id, username, password, full_name, role FROM ms_users WHERE username = '$username'";
     $result = mysqli_query($conn, $sql);
 
-    // 5. Cek apakah pengguna ditemukan (harus ada 1 baris hasil)
     if (mysqli_num_rows($result) == 1) {
         
-        // Ambil data pengguna dari hasil query
         $user = mysqli_fetch_assoc($result);
 
-        // 6. Verifikasi password yang diketik dengan hash di database
         if (password_verify($password, $user['password'])) {
             
-            // 7. Jika password cocok, simpan data ke session
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_username'] = $user['username'];
             $_SESSION['user_full_name'] = $user['full_name'];
             $_SESSION['user_role'] = $user['role'];
 
-            // 8. Arahkan pengguna ke halaman dashboard
             header("Location: dashboard.php");
             exit();
 
         } else {
-            // Jika password tidak cocok
             $error_message = "Username atau password salah!";
         }
     } else {
-        // Jika username tidak ditemukan
         $error_message = "Username atau password salah!";
     }
 }
@@ -51,6 +40,34 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - PT MORA TELEMATIKA INDONESIA TBK</title>
     <link rel="icon" type="image/png" href="https://moratelindo.co.id/assets/images/favicon.png">
+    
+</head>
+<body>
+    <div class="login-wrapper">
+        <img src="https://www.idn.id/wp-content/uploads/2024/07/MORATELINDO.png" alt="Moratelindo Logo" class="company-logo">
+        <div class="company-name">PT MORA TELEMATIKA INDONESIA TBK</div>
+        <div class="system-title">CRM Trouble Ticketing System</div>
+
+        <?php if (!empty($error_message)): ?>
+            <div class="error-message"><?php echo $error_message; ?></div>
+        <?php endif; ?>
+
+        <form action="login.php" method="POST" autocomplete="off">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" placeholder="Masukkan username Anda" required autofocus>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Masukkan password" required>
+            </div>
+            <button type="submit" class="btn">Login</button>
+        </form>
+        <div class="login-footer">
+            &copy; <?php echo date('Y'); ?> PT Mora Telematika Indonesia Tbk. All rights reserved.
+        </div>
+    </div>
+    
     <style>
         body {
             background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
@@ -147,31 +164,5 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             .login-wrapper { padding: 24px 8px 20px 8px; }
         }
     </style>
-</head>
-<body>
-    <div class="login-wrapper">
-        <img src="https://www.idn.id/wp-content/uploads/2024/07/MORATELINDO.png" alt="Moratelindo Logo" class="company-logo">
-        <div class="company-name">PT MORA TELEMATIKA INDONESIA TBK</div>
-        <div class="system-title">CRM Trouble Ticketing System</div>
-
-        <?php if (!empty($error_message)): ?>
-            <div class="error-message"><?php echo $error_message; ?></div>
-        <?php endif; ?>
-
-        <form action="login.php" method="POST" autocomplete="off">
-            <div class="form-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="Masukkan username Anda" required autofocus>
-            </div>
-            <div class="form-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Masukkan password" required>
-            </div>
-            <button type="submit" class="btn">Login</button>
-        </form>
-        <div class="login-footer">
-            &copy; <?php echo date('Y'); ?> PT Mora Telematika Indonesia Tbk. All rights reserved.
-        </div>
-    </div>
 </body>
 </html>

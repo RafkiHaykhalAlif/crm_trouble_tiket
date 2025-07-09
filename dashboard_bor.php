@@ -1,19 +1,16 @@
 <?php
 include 'config/db_connect.php';
 
-// --- PENJAGA HALAMAN ---
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// Cek apakah user adalah BOR, kalau bukan redirect ke dashboard biasa
 if ($_SESSION['user_role'] !== 'BOR') {
     header('Location: dashboard.php');
     exit();
 }
 
-// --- AMBIL DATA TIKET YANG DITUGASKAN KE BOR ---
 $bor_user_id = $_SESSION['user_id'];
 
 $sql_get_bor_tickets = "SELECT 
@@ -39,16 +36,12 @@ JOIN ms_users u_creator ON t.created_by_user_id = u_creator.id
 LEFT JOIN tr_work_orders wo ON t.id = wo.ticket_id
 LEFT JOIN ms_users u_vendor ON wo.assigned_to_vendor_id = u_vendor.id
 WHERE (
-    -- Ticket biasa yang di-handle BOR
     (t.status = 'On Progress - BOR' AND t.current_owner_user_id = '$bor_user_id')
     OR
-    -- WO yang SUDAH di-review dispatch dan statusnya 'Waiting For BOR Review'
     (t.status = 'Waiting For BOR Review' AND wo.reviewed_by_dispatch_id IS NOT NULL)
     OR
-    -- Ticket yang udah closed tapi masih mau keliatan
     (t.status IN ('Closed - Solved', 'Closed - Unsolved'))
     OR
-    -- Ticket yang lagi nunggu dispatch
     (t.status = 'Waiting for Dispatch' AND t.current_owner_user_id = '$bor_user_id')
 )
 ORDER BY 
@@ -64,7 +57,6 @@ ORDER BY
 $result_tickets = mysqli_query($conn, $sql_get_bor_tickets);
 $tickets = mysqli_fetch_all($result_tickets, MYSQLI_ASSOC);
 
-// --- STATISTIK DASHBOARD BOR ---
 $sql_stats = "SELECT 
     SUM(CASE WHEN status = 'On Progress - BOR' THEN 1 ELSE 0 END) as in_progress,
     SUM(CASE WHEN status = 'Waiting for Dispatch' THEN 1 ELSE 0 END) as waiting_dispatch,
@@ -77,7 +69,6 @@ WHERE current_owner_user_id = '$bor_user_id'
 $result_stats = mysqli_query($conn, $sql_stats);
 $stats = mysqli_fetch_assoc($result_stats);
 
-// --- Cek pesan dari proses ---
 $message = '';
 if (isset($_GET['status'])) {
     switch($_GET['status']) {
@@ -101,6 +92,7 @@ if (isset($_GET['status'])) {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Dashboard BOR - CRM Ticketing</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
@@ -120,7 +112,6 @@ if (isset($_GET['status'])) {
     <main class="container">
         <?php echo $message; ?>
         
-        <!-- Statistik Dashboard BOR -->
         <div class="stats-grid">
             <div class="stat-card stat-review">
                 <div class="stat-number"><?php echo $stats['waiting_review']; ?></div>
@@ -142,7 +133,6 @@ if (isset($_GET['status'])) {
 
         <div class="dashboard-bor-grid">
             
-            <!-- Form Quick Action BOR -->
             <div class="bor-action-column">
                 <section class="card">
                     <h3>Quick Actions BOR</h3>
@@ -165,7 +155,6 @@ if (isset($_GET['status'])) {
                 </section>
             </div>
 
-            <!-- Daftar Ticket BOR -->
             <div class="ticket-list-bor-column">
                 <section class="card">
                     <h3>Daftar Trouble Ticket untuk BOR</h3>
@@ -332,273 +321,90 @@ if (isset($_GET['status'])) {
     </main>
 
     <script>
-    // Fungsi untuk resolve ticket oleh BOR
-    function resolveTicket(ticketId) {
-        if (confirm('Apakah masalah ticket ini sudah berhasil diselesaikan secara remote oleh BOR?')) {
-            window.location.href = 'proses_bor_resolve.php?ticket_id=' + ticketId;
-        }
-    }
-
-    // Fungsi untuk dispatch ticket ke teknisi lapangan
-    function dispatchTicket(ticketId) {
-        if (confirm('Apakah ticket ini perlu ditangani oleh teknisi lapangan?\nTicket akan dikirim ke tim Dispatch.')) {
-            window.location.href = 'proses_bor_dispatch.php?ticket_id=' + ticketId;
-        }
-    }
-
-    // Fungsi untuk approve Work Order
-    function approveWO(woId) {
-        if(confirm('Yakin ingin menutup WO ini?')) {
-            window.location.href = 'proses_bor_close_wo.php?wo_id=' + woId + '&action=approve';
-        }
-    }
-
-    // Fungsi filter quick actions
-    function showAllTickets() {
-        const rows = document.querySelectorAll('#borTicketTable tbody tr');
-        rows.forEach(row => row.style.display = '');
-    }
-
-    function showReviewTickets() {
-        const rows = document.querySelectorAll('#borTicketTable tbody tr');
-        rows.forEach(row => {
-            const status = (row.dataset.status || '').toLowerCase();
-            if (status === 'waiting for bor review') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
+        function resolveTicket(ticketId) {
+            if (confirm('Apakah masalah ticket ini sudah berhasil diselesaikan secara remote oleh BOR?')) {
+                window.location.href = 'proses_bor_resolve.php?ticket_id=' + ticketId;
             }
-        });
-    }
-
-    function showOnProgressOnly() {
-        const rows = document.querySelectorAll('#borTicketTable tbody tr');
-        rows.forEach(row => {
-            const status = (row.dataset.status || '').toLowerCase();
-            if (status === 'on progress - bor') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    function showCompletedTickets() {
-        const rows = document.querySelectorAll('#borTicketTable tbody tr');
-        rows.forEach(row => {
-            const status = (row.dataset.status || '').toLowerCase();
-            if (status === 'closed - solved' || status === 'closed - unsolved') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    // Fungsi untuk mencari tiket berdasarkan input
-    document.getElementById('searchTicketForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        const searchTerm = document.getElementById('searchTicketInput').value.toLowerCase();
-        const rows = document.querySelectorAll('#borTicketTable tbody tr');
-        rows.forEach(row => {
-            const ticketCode = row.cells[0].textContent.toLowerCase();
-            const customerName = row.cells[1].textContent.toLowerCase();
-            const problemDescription = row.cells[2].textContent.toLowerCase();
-            
-            if (ticketCode.includes(searchTerm) || customerName.includes(searchTerm) || problemDescription.includes(searchTerm)) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    });
-
-    document.addEventListener('DOMContentLoaded', function() {
-        // Quick Action buttons
-        document.querySelector('#showAllTickets').addEventListener('click', showAllTickets);
-        document.querySelector('#showReviewBtn').addEventListener('click', showReviewTickets);
-        document.querySelector('#showProgressBtn').addEventListener('click', showOnProgressOnly);
-        document.querySelector('#showCompletedBtn').addEventListener('click', showCompletedTickets);
-    });
-    </script>
-
-    <style>
-    
-    body {
-    background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
-    min-height: 100vh;
-    margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    }
-    
-    .user-role-bor {
-        background-color: #fd7e14 !important;
-    }
-
-    /* New stat card for review */
-    .stat-review {
-        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .stat-review::after {
-        content: '!';
-        position: absolute;
-        top: 10px;
-        right: 15px;
-        font-size: 24px;
-        font-weight: bold;
-        color: rgba(255,255,255,0.8);
-        animation: pulse-icon 2s infinite;
-    }
-
-    @keyframes pulse-icon {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.2); }
-        100% { transform: scale(1); }
-    }
-
-    /* Blinking animation for urgent status */
-    @keyframes blink {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
-    }
-
-    /* Alert box styling */
-    .alert-box {
-        background-color: #fff3cd;
-        border: 1px solid #ffeaa7;
-        border-left: 4px solid #ffc107;
-        border-radius: 6px;
-        padding: 15px;
-        margin-top: 20px;
-    }
-
-    .alert-box h4 {
-        margin-top: 0;
-        color: #856404;
-        font-size: 1rem;
-    }
-
-    .alert-box p {
-        margin: 8px 0;
-        color: #856404;
-        font-size: 14px;
-    }
-
-    /* Tombol approve/unsolved */
-    .btn-approve {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-approve:hover {
-        background-color: #218838;
-        transform: scale(1.05);
-    }
-
-    .btn-unsolved {
-        background-color: #dc3545;
-        color: white;
-    }
-
-    .btn-unsolved:hover {
-        background-color: #c82333;
-        transform: scale(1.05);
-    }
-
-    /* Enhanced action buttons layout */
-    .bor-action-buttons {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-        flex-direction: column;
-        align-items: flex-start;
-        max-width: 150px;
-    }
-
-    .bor-action-buttons .btn-bor-action {
-        width: 100%;
-        justify-content: center;
-    }
-
-    /* Highlight untuk WO yang perlu review */
-    tr[data-status="waiting-for-bor-review"] {
-        background-color: #fff8e1 !important;
-        border-left: 4px solid #ffc107;
-    }
-
-    tr[data-status="waiting-for-bor-review"]:hover {
-        background-color: #fff3c4 !important;
-    }
-
-    /* Tambahkan di <style> atau file CSS Anda */
-    .table-container {
-        border: 1px solid #e0e0e0;
-        border-radius: 8px;
-        overflow: hidden;
-        background: #fff;
-        margin-top: 12px;
-    }
-
-    .ticket-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 14px;
-    }
-
-    .ticket-table th, 
-    .ticket-table td {
-        border: 1px solid #e0e0e0;
-        padding: 12px;
-        text-align: left;
-    }
-
-    .ticket-table th {
-        background: #f5f7fa;
-        font-weight: 600;
-        position: sticky;
-        top: 0;
-        z-index: 1;
-    }
-
-    .ticket-table tbody tr:nth-child(even) {
-        background: #f9fbfd;
-    }
-
-    .ticket-table tbody tr:hover {
-        background: #e3f2fd;
-    }
-
-    /* Responsive adjustments */
-    @media (max-width: 768px) {
-        .bor-action-buttons {
-            max-width: none;
-        }
-        
-        .bor-action-buttons .btn-bor-action {
-            font-size: 10px;
-            padding: 4px 8px;
-        }
-    }
-        .search-highlight, .search-highlight td {
-        background: #e3f2fd !important;
         }
 
-    .search-highlight td {
-        background-color: #e3f2fd !important;
-    }
+        function dispatchTicket(ticketId) {
+            if (confirm('Apakah ticket ini perlu ditangani oleh teknisi lapangan?\nTicket akan dikirim ke tim Dispatch.')) {
+                window.location.href = 'proses_bor_dispatch.php?ticket_id=' + ticketId;
+            }
+        }
 
-</style>
+        function approveWO(woId) {
+            if(confirm('Yakin ingin menutup WO ini?')) {
+                window.location.href = 'proses_bor_close_wo.php?wo_id=' + woId + '&action=approve';
+            }
+        }
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
+        function showAllTickets() {
+            const rows = document.querySelectorAll('#borTicketTable tbody tr');
+            rows.forEach(row => row.style.display = '');
+        }
+
+        function showReviewTickets() {
+            const rows = document.querySelectorAll('#borTicketTable tbody tr');
+            rows.forEach(row => {
+                const status = (row.dataset.status || '').toLowerCase();
+                if (status === 'waiting for bor review') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showOnProgressOnly() {
+            const rows = document.querySelectorAll('#borTicketTable tbody tr');
+            rows.forEach(row => {
+                const status = (row.dataset.status || '').toLowerCase();
+                if (status === 'on progress - bor') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showCompletedTickets() {
+            const rows = document.querySelectorAll('#borTicketTable tbody tr');
+            rows.forEach(row => {
+                const status = (row.dataset.status || '').toLowerCase();
+                if (status === 'closed - solved' || status === 'closed - unsolved') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        document.getElementById('searchTicketForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const searchTerm = document.getElementById('searchTicketInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#borTicketTable tbody tr');
+            rows.forEach(row => {
+                const ticketCode = row.cells[0].textContent.toLowerCase();
+                const customerName = row.cells[1].textContent.toLowerCase();
+                const problemDescription = row.cells[2].textContent.toLowerCase();
+                
+                if (ticketCode.includes(searchTerm) || customerName.includes(searchTerm) || problemDescription.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('#showAllTickets').addEventListener('click', showAllTickets);
+            document.querySelector('#showReviewBtn').addEventListener('click', showReviewTickets);
+            document.querySelector('#showProgressBtn').addEventListener('click', showOnProgressOnly);
+            document.querySelector('#showCompletedBtn').addEventListener('click', showCompletedTickets);
+        });document.addEventListener('DOMContentLoaded', function() {
         const tbody = document.querySelector('#borTicketTable tbody');
         if (!tbody) return;
-
-        // Simpan urutan asli baris saat halaman dimuat
         const originalRows = Array.from(tbody.querySelectorAll('tr'));
         const searchForm = document.getElementById('searchTicketForm');
         const searchInput = document.getElementById('searchTicketInput');
@@ -608,34 +414,27 @@ if (isset($_GET['status'])) {
         searchForm.addEventListener('submit', function(e) {
             e.preventDefault();
             const searchValue = searchInput.value.trim().toLowerCase();
-            
-            // Reset highlight
             const rows = Array.from(tbody.querySelectorAll('tr'));
             rows.forEach(row => {
                 row.classList.remove('search-highlight');
                 row.style.display = '';
             });
 
-            // Jika input kosong, kembalikan ke urutan semula
             if (searchValue === '') {
-                // Hapus semua baris dari tbody
                 while (tbody.firstChild) {
                     tbody.removeChild(tbody.firstChild);
                 }
-                // Kembalikan urutan asli
                 originalRows.forEach(row => {
                     tbody.appendChild(row);
                 });
                 return;
             }
 
-            // Cari di semua kolom yang relevan
             let foundRows = [];
             rows.forEach(row => {
                 const ticketId = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
                 const customer = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
                 const issue = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
-
                 if (ticketId.includes(searchValue) || 
                     customer.includes(searchValue) || 
                     issue.includes(searchValue)) {
@@ -643,15 +442,256 @@ if (isset($_GET['status'])) {
                 }
             });
 
-            // Pindahkan baris yang cocok ke atas dan highlight
             foundRows.reverse().forEach(row => {
                 row.classList.add('search-highlight');
                 tbody.insertBefore(row, tbody.firstChild);
             });
         });
     });
-</script>
+    </script>
 
+    <style>
+    
+        body {
+        background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+        min-height: 100vh;
+        margin: 0;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        }
+        
+        .user-role-bor {
+            background-color: #fd7e14 !important;
+        }
+
+        .stat-review {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-review::after {
+            content: '!';
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            font-weight: bold;
+            color: rgba(255,255,255,0.8);
+            animation: pulse-icon 2s infinite;
+        }
+
+        @keyframes pulse-icon {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        .alert-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-left: 4px solid #ffc107;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .alert-box h4 {
+            margin-top: 0;
+            color: #856404;
+            font-size: 1rem;
+        }
+
+        .alert-box p {
+            margin: 8px 0;
+            color: #856404;
+            font-size: 14px;
+        }
+
+        .btn-approve {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-approve:hover {
+            background-color: #218838;
+            transform: scale(1.05);
+        }
+
+        .btn-unsolved {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-unsolved:hover {
+            background-color: #c82333;
+            transform: scale(1.05);
+        }
+
+        .bor-action-buttons {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            flex-direction: column;
+            align-items: flex-start;
+            max-width: 150px;
+        }
+
+        .bor-action-buttons .btn-bor-action {
+            width: 100%;
+            justify-content: center;
+        }
+
+        tr[data-status="waiting-for-bor-review"] {
+            background-color: #fff8e1 !important;
+            border-left: 4px solid #ffc107;
+        }
+
+        tr[data-status="waiting-for-bor-review"]:hover {
+            background-color: #fff3c4 !important;
+        }
+
+        .table-container {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #fff;
+            margin-top: 12px;
+        }
+
+        .ticket-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .ticket-table th, 
+        .ticket-table td {
+            border: 1px solid #e0e0e0;
+            padding: 12px;
+            text-align: left;
+        }
+
+        .ticket-table th {
+            background: #f5f7fa;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        .ticket-table tbody tr:nth-child(even) {
+            background: #f9fbfd;
+        }
+
+        .ticket-table tbody tr:hover {
+            background: #e3f2fd;
+        }
+
+        @media (max-width: 768px) {
+            .bor-action-buttons {
+                max-width: none;
+            }
+            
+            .bor-action-buttons .btn-bor-action {
+                font-size: 10px;
+                padding: 4px 8px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container, .main-header .container {
+                max-width: 100vw;
+                width: 100%;
+                padding: 0 4px;
+                box-sizing: border-box;
+            }
+            .stats-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+            }
+            .dashboard-bor-grid {
+                flex-direction: column;
+                gap: 16px;
+            }
+            .bor-action-column,
+            .ticket-list-bor-column {
+                width: 100%;
+                min-width: 0;
+                padding: 0;
+            }
+            .card {
+                padding: 10px 4px;
+                border-radius: 0;
+                box-shadow: none;
+                margin: 0;
+            }
+            .quick-actions {
+                flex-direction: column;
+                gap: 8px;
+            }
+            .btn-quick-action {
+                width: 100%;
+                font-size: 1rem;
+                margin-bottom: 6px;
+            }
+            .table-container {
+                overflow-x: auto;
+                width: 100vw !important;
+                max-width: 100vw !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                box-sizing: border-box;
+                border-radius: 0;
+            }
+            .ticket-table {
+                min-width: 700px;
+                width: 700px;
+                max-width: none;
+            }
+            .bor-action-buttons {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: 4px;
+                max-width: none;
+            }
+            .bor-action-buttons .btn-bor-action {
+                font-size: 11px;
+                padding: 4px 8px;
+                width: auto;
+            }
+            .main-header h1 {
+                font-size: 1.1rem;
+                padding: 4px 0;
+            }
+            .user-info {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            .stat-card .stat-number {
+                font-size: 1.5rem;
+            }
+            .stat-card .stat-label {
+                font-size: 1rem;
+            }
+
+
+            .search-highlight, .search-highlight td {
+                background: #e3f2fd !important;
+                }
+
+            .search-highlight td {
+                background-color: #e3f2fd !important;
+            }
+        }
+</style>
 
 </body>
 </html>

@@ -4,13 +4,11 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 include 'config/db_connect.php';
 
-// --- PENJAGA HALAMAN ---
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// Cek apakah user adalah Admin IKR, kalau bukan redirect ke dashboard biasa
 if ($_SESSION['user_role'] !== 'Admin IKR') {
     header('Location: dashboard.php');
     exit();
@@ -18,7 +16,6 @@ if ($_SESSION['user_role'] !== 'Admin IKR') {
 
 $admin_user_id = $_SESSION['user_id'];
 
-// --- AMBIL DATA WORK ORDER YANG PERLU DI-HANDLE ADMIN IKR ---
 $sql_get_work_orders = "SELECT 
     wo.id,
     wo.wo_code,
@@ -72,7 +69,6 @@ ORDER BY
 $result_work_orders = mysqli_query($conn, $sql_get_work_orders);
 $work_orders = mysqli_fetch_all($result_work_orders, MYSQLI_ASSOC);
 
-// --- STATISTIK DASHBOARD ADMIN IKR ---
 $sql_stats = "SELECT 
     SUM(CASE WHEN status = 'Received by Admin IKR' THEN 1 ELSE 0 END) as new_wo,
     SUM(CASE WHEN status = 'Scheduled by Admin IKR' THEN 1 ELSE 0 END) as scheduled_wo,
@@ -85,7 +81,6 @@ WHERE status IN ('Received by Admin IKR', 'Scheduled by Admin IKR', 'In Progress
 $result_stats = mysqli_query($conn, $sql_stats);
 $stats = mysqli_fetch_assoc($result_stats);
 
-// --- AMBIL DAFTAR TEKNISI IKR YANG AVAILABLE ---
 $sql_vendors = "SELECT 
     u.id, 
     u.full_name,
@@ -98,7 +93,6 @@ ORDER BY active_wo_count ASC, u.full_name";
 $result_vendors = mysqli_query($conn, $sql_vendors);
 $vendors = mysqli_fetch_all($result_vendors, MYSQLI_ASSOC);
 
-// --- Cek pesan dari proses ---
 $message = '';
 if (isset($_GET['status'])) {
     switch($_GET['status']) {
@@ -138,7 +132,6 @@ if (isset($_GET['status'])) {
     <main class="container">
         <?php echo $message; ?>
         
-        <!-- Statistik Dashboard Admin IKR -->
         <div class="stats-grid">
             <div class="stat-card stat-new">
                 <div class="stat-number"><?php echo $stats['new_wo']; ?></div>
@@ -169,7 +162,6 @@ if (isset($_GET['status'])) {
 
         <div class="dashboard-admin-ikr-grid"> 
             <div class="admin-action-column">
-                <!-- Quick Actions Sidebar -->
                 <div class="quick-actions-box">
                     <div class="quick-actions-title">
                         <span style="font-size:1.3em; margin-right:6px;"></span>
@@ -193,7 +185,6 @@ if (isset($_GET['status'])) {
                     </button>
                 </div>
             </div>
-            <!-- Kolom Work Orders -->
             <div class="work-order-list-column">
                 <div class="work-orders-management">
                     <section class="card">
@@ -371,7 +362,6 @@ if (isset($_GET['status'])) {
         </div>
     </main>
 
-    <!-- Modal untuk Schedule WO -->
     <div id="scheduleModal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="closeScheduleModal()">&times;</span>
@@ -408,7 +398,6 @@ if (isset($_GET['status'])) {
         </div>
     </div>
 
-    <!-- Modal untuk Edit Schedule & Technician -->
     <div id="editScheduleModal" class="modal" style="display: none;">
         <div class="modal-content">
             <span class="close" onclick="closeEditScheduleModal()">&times;</span>
@@ -445,518 +434,493 @@ if (isset($_GET['status'])) {
     </div>
 
     <script>
-    // Modal functions untuk schedule
-    function scheduleWO(woId) {
-        document.getElementById('scheduleWoId').value = woId;
-        document.getElementById('scheduleModal').style.display = 'block';
-        
-        // Set minimum date to today
-        const now = new Date();
-        const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-        document.getElementById('visit_date').min = tomorrow.toISOString().slice(0, 16);
-    }
-
-    function closeScheduleModal() {
-        document.getElementById('scheduleModal').style.display = 'none';
-    }
-
-    function editSchedule(woId) {
-        const row = document.querySelector('tr[data-wo-id="' + woId + '"]');
-        if (row) {
-            // Prefill jadwal
-            document.getElementById('edit_visit_date').value = row.dataset.visitDate || '';
-            // Prefill teknisi
-            document.getElementById('edit_assigned_vendor').value = row.dataset.vendorId || '';
-        }
-        document.getElementById('editWoId').value = woId;
-        document.getElementById('editScheduleModal').style.display = 'block';
-    }
-
-    function closeEditScheduleModal() {
-        document.getElementById('editScheduleModal').style.display = 'none';
-    }
-
-    // Tutup modal jika klik di luar
-    window.onclick = function(event) {
-        const modal = document.getElementById('editScheduleModal');
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    }
-
-    function reassignTech(woId) {
-        window.location.href = 'reassign_technician.php?wo_id=' + woId;
-    }
-
-    function contactTech(vendorId) {
-        // This could open a modal with technician contact info
-        alert('Feature: Contact Technician - Will show technician contact details');
-    }
-
-    function forwardToDispatch(woId) {
-        if (confirm('Forward this completed Work Order to Dispatch for final review?')) {
-            window.location.href = 'forward_wo_to_dispatch.php?wo_id=' + woId;
-        }
-    }
-
-    // Filter functions
-    function showAllWO() {
-        const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
-        rows.forEach(row => row.style.display = '');
-    }
-
-    function showNewWO() {
-        const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
-        rows.forEach(row => {
-            if (row.dataset.status === 'received-by-admin-ikr') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    function showScheduledWO() {
-        const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
-        rows.forEach(row => {
-            if (row.dataset.status === 'scheduled-by-admin-ikr') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    function showInProgressWO() {
-        const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
-        rows.forEach(row => {
-            if (row.dataset.status === 'in-progress') {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    function showCompletedWO() {
-        const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
-        rows.forEach(row => {
-            const status = (row.dataset.status || '').trim().toLowerCase();
-            if (
-                status === 'scheduled by admin ikr' ||
-                status === 'completed by technician' ||
-                status === 'Closed by BOR'
-            ) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-
-    // Close modal when clicking outside
-    window.onclick = function(event) {
-        const modal = document.getElementById('scheduleModal');
-        if (event.target == modal) {
-            modal.style.display = 'none';
-        }
-    }
-
-    // Modal functions untuk edit schedule & technician
-    function closeEditScheduleModal() {
-        document.getElementById('editScheduleModal').style.display = 'none';
-    }
-
-    // Pre-fill and open edit modal
-    function openEditModal(woId, visitDate, assignedVendor, specialNotes) {
-        document.getElementById('editWoId').value = woId;
-        document.getElementById('edit_visit_date').value = visitDate;
-        document.getElementById('edit_assigned_vendor').value = assignedVendor;
-        document.getElementById('edit_special_notes').value = specialNotes;
-        document.getElementById('editScheduleModal').style.display = 'block';
-    }
-
-    function filterWO(filter) {
-        const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
-        rows.forEach(row => {
-            row.style.display = ''; // Reset display
-            const status = (row.dataset.status || '').trim().toLowerCase();
+        function scheduleWO(woId) {
+            document.getElementById('scheduleWoId').value = woId;
+            document.getElementById('scheduleModal').style.display = 'block';
             
-            if (filter === 'new' && status !== 'received by admin ikr') {
-                row.style.display = 'none';
-            } else if (filter === 'scheduled' && status !== 'scheduled by admin ikr') {
-                row.style.display = 'none';
-            } else if (filter === 'inprogress' && status !== 'in progress') {
-                row.style.display = 'none';
-            } else if (filter === 'completed' && status !== 'completed by technician' && status !== 'closed by bor') {
-                row.style.display = 'none';
+            const now = new Date();
+            const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            document.getElementById('visit_date').min = tomorrow.toISOString().slice(0, 16);
+        }
+
+        function closeScheduleModal() {
+            document.getElementById('scheduleModal').style.display = 'none';
+        }
+
+        function editSchedule(woId) {
+            const row = document.querySelector('tr[data-wo-id="' + woId + '"]');
+            if (row) {
+                document.getElementById('edit_visit_date').value = row.dataset.visitDate || '';
+                document.getElementById('edit_assigned_vendor').value = row.dataset.vendorId || '';
+            }
+            document.getElementById('editWoId').value = woId;
+            document.getElementById('editScheduleModal').style.display = 'block';
+        }
+
+        function closeEditScheduleModal() {
+            document.getElementById('editScheduleModal').style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('editScheduleModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function reassignTech(woId) {
+            window.location.href = 'reassign_technician.php?wo_id=' + woId;
+        }
+
+        function contactTech(vendorId) {
+            alert('Feature: Contact Technician - Will show technician contact details');
+        }
+
+        function forwardToDispatch(woId) {
+            if (confirm('Forward this completed Work Order to Dispatch for final review?')) {
+                window.location.href = 'forward_wo_to_dispatch.php?wo_id=' + woId;
+            }
+        }
+
+        function showAllWO() {
+            const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
+            rows.forEach(row => row.style.display = '');
+        }
+
+        function showNewWO() {
+            const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                if (row.dataset.status === 'received-by-admin-ikr') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showScheduledWO() {
+            const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                if (row.dataset.status === 'scheduled-by-admin-ikr') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showInProgressWO() {
+            const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                if (row.dataset.status === 'in-progress') {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        function showCompletedWO() {
+            const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                const status = (row.dataset.status || '').trim().toLowerCase();
+                if (
+                    status === 'scheduled by admin ikr' ||
+                    status === 'completed by technician' ||
+                    status === 'Closed by BOR'
+                ) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        window.onclick = function(event) {
+            const modal = document.getElementById('scheduleModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function closeEditScheduleModal() {
+            document.getElementById('editScheduleModal').style.display = 'none';
+        }
+
+        function openEditModal(woId, visitDate, assignedVendor, specialNotes) {
+            document.getElementById('editWoId').value = woId;
+            document.getElementById('edit_visit_date').value = visitDate;
+            document.getElementById('edit_assigned_vendor').value = assignedVendor;
+            document.getElementById('edit_special_notes').value = specialNotes;
+            document.getElementById('editScheduleModal').style.display = 'block';
+        }
+
+        function filterWO(filter) {
+            const rows = document.querySelectorAll('#adminWorkOrderTable tbody tr');
+            rows.forEach(row => {
+                row.style.display = ''; 
+                const status = (row.dataset.status || '').trim().toLowerCase();
+                
+                if (filter === 'new' && status !== 'received by admin ikr') {
+                    row.style.display = 'none';
+                } else if (filter === 'scheduled' && status !== 'scheduled by admin ikr') {
+                    row.style.display = 'none';
+                } else if (filter === 'inprogress' && status !== 'in progress') {
+                    row.style.display = 'none';
+                } else if (filter === 'completed' && status !== 'completed by technician' && status !== 'closed by bor') {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        const tableBody = document.querySelector('.table-wo tbody');
+        const originalRows = Array.from(document.querySelectorAll('.wo-row'));
+
+        document.getElementById('search-wo-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const input = document.getElementById('search-wo-input').value.trim().toLowerCase();
+            const messageDiv = document.getElementById('search-wo-message');
+            messageDiv.textContent = '';
+
+            if (!input) {
+                while (tableBody.firstChild) tableBody.removeChild(tableBody.firstChild);
+                originalRows.forEach(row => tableBody.appendChild(row));
+                return;
+            }
+
+            const found = originalRows.find(row => row.getAttribute('data-id').toLowerCase().includes(input));
+            if (found) {
+                while (tableBody.firstChild) tableBody.removeChild(tableBody.firstChild);
+                tableBody.appendChild(found);
+                originalRows.filter(row => row !== found).forEach(row => tableBody.appendChild(row));
+                found.style.background = "#fffbe6";
+                setTimeout(() => { found.style.background = ""; }, 1200);
+            } else {
+                while (tableBody.firstChild) tableBody.removeChild(tableBody.firstChild);
+                originalRows.forEach(row => tableBody.appendChild(row));
+                messageDiv.textContent = "WO tidak ditemukan.";
             }
         });
-    }
 
-const tableBody = document.querySelector('.table-wo tbody');
-const originalRows = Array.from(document.querySelectorAll('.wo-row'));
-
-document.getElementById('search-wo-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const input = document.getElementById('search-wo-input').value.trim().toLowerCase();
-    const messageDiv = document.getElementById('search-wo-message');
-    messageDiv.textContent = '';
-
-    // Reset tabel jika input kosong
-    if (!input) {
-        while (tableBody.firstChild) tableBody.removeChild(tableBody.firstChild);
-        originalRows.forEach(row => tableBody.appendChild(row));
-        return;
-    }
-
-    // Temukan baris yang cocok
-    const found = originalRows.find(row => row.getAttribute('data-id').toLowerCase().includes(input));
-    if (found) {
-        while (tableBody.firstChild) tableBody.removeChild(tableBody.firstChild);
-        tableBody.appendChild(found);
-        originalRows.filter(row => row !== found).forEach(row => tableBody.appendChild(row));
-        found.style.background = "#fffbe6";
-        setTimeout(() => { found.style.background = ""; }, 1200);
-    } else {
-        while (tableBody.firstChild) tableBody.removeChild(tableBody.firstChild);
-        originalRows.forEach(row => tableBody.appendChild(row));
-        messageDiv.textContent = "WO tidak ditemukan.";
-    }
-});
-
-// Reset pesan jika user mengetik ulang
-document.getElementById('search-wo-input').addEventListener('input', function() {
-    if (!this.value.trim()) {
-        document.getElementById('search-wo-message').textContent = '';
-        while (tableBody.firstChild) tableBody.removeChild(tableBody.firstChild);
-        originalRows.forEach(row => tableBody.appendChild(row));
-    }
-});
+        document.getElementById('search-wo-input').addEventListener('input', function() {
+            if (!this.value.trim()) {
+                document.getElementById('search-wo-message').textContent = '';
+                while (tableBody.firstChild) tableBody.removeChild(tableBody.firstChild);
+                originalRows.forEach(row => tableBody.appendChild(row));
+            }
+        });
     </script>
 
     <style>
     
-    body {
-    background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
-    min-height: 100vh;
-    margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    }
-    
-    /* Admin IKR specific styles */
-    .user-role-admin-ikr {
-        background-color: #6f42c1 !important;
-    }
-
-    .dashboard-admin-ikr-grid {
-        display: grid;
-        grid-template-columns: 320px 1fr; /* kiri 320px, kanan fleksibel */
-        gap: 30px;
-        align-items: flex-start;
-    }
-
-    .admin-action-column {
-        /* Optional: agar sticky saat scroll */
-        position: sticky;
-        top: 20px;
-    }
-
-    @media (max-width: 992px) {
-        .dashboard-admin-ikr-grid {
-            grid-template-columns: 1fr;
-        }
-        .admin-action-column {
-            position: static;
-        }
-    }
-
-    /* New stat card colors for admin IKR */
-    .stat-new {
-        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
-    }
-
-    .stat-scheduled {
-        background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
-    }
-
-    .stat-progress {
-        background: linear-gradient(135deg, #fd7e14 0%, #dc3545 100%);
-    }
-
-    .stat-completed {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    }
-
-    .stat-today {
-        background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
-    }
-
-    /* Technician Summary */
-    .technician-summary {
-        margin-top: 25px;
-        padding: 20px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-        border-left: 4px solid #6f42c1;
-    }
-
-    .technician-summary h4 {
-        margin-top: 0;
-        color: #6f42c1;
-        font-size: 1rem;
-        margin-bottom: 15px;
-    }
-
-    .workload-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .workload-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 12px;
-        background-color: white;
-        border-radius: 6px;
-        border: 1px solid #dee2e6;
-    }
-
-    .tech-name {
-        font-weight: 500;
-        color: #495057;
-        font-size: 14px;
-    }
-
-    .workload-count {
-        font-size: 12px;
-        font-weight: bold;
-        padding: 4px 8px;
-        border-radius: 12px;
-    }
-
-    .low-load {
-        background-color: #d1edff;
-        color: #0c5460;
-    }
-
-    .medium-load {
-        background-color: #fff3cd;
-        color: #856404;
-    }
-
-    .high-load {
-        background-color: #f8d7da;
-        color: #721c24;
-    }
-
-    /* Admin action buttons */
-    .admin-action-buttons {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        width: 100%;
-    }
-
-    .btn-admin-action {
-        padding: 4px 8px;
-        border: none;
-        border-radius: 4px;
-        font-size: 10px;
-        font-weight: 500;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 3px;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-    }
-
-    .btn-schedule {
-        background-color: #ffc107;
-        color: #212529;
-    }
-
-    .btn-edit {
-        background-color: #17a2b8;
-        color: white;
-    }
-
-    .btn-reassign {
-        background-color: #6c757d;
-        color: white;
-    }
-
-    .btn-contact {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-forward {
-        background-color: #6f42c1;
-        color: white;
-    }
-
-    .btn-report {
-        background-color: #fd7e14;
-        color: white;
-    }
-
-    .btn-admin-action:hover {
-        transform: scale(1.05);
-        opacity: 0.9;
-    }
-
-    /* Modal styling */
-    .modal {
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.5);
-    }
-
-    .modal-content {
-        background-color: white;
-        margin: 5% auto;
-        padding: 30px;
-        border-radius: 10px;
-        width: 90%;
-        max-width: 500px;
-        position: relative;
-    }
-
-    .close {
-        position: absolute;
-        right: 15px;
-        top: 15px;
-        font-size: 28px;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .close:hover {
-        color: #dc3545;
-    }
-
-    /* Table enhancements */
-    .customer-info {
-        margin-bottom: 6px;
-    }
-
-    .issue-info {
-        font-size: 12px;
-    }
-
-    /* Tambahkan di file CSS Anda */
-.quick-actions-box {
-    background: #fff;
-    border-radius: 14px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-    padding: 24px 18px 18px 18px;
-    margin-bottom: 30px;
-    min-width: 240px;
-}
-
-.quick-actions-title {
-    font-size: 1.2em;
-    font-weight: bold;
-    margin-bottom: 8px;
-    display: flex;
-    align-items: center;
-}
-
-.quick-actions-divider {
-    border: none;
-    border-top: 1.5px solid #eee;
-    margin: 0 0 18px 0;
-}
-
-.quick-action-btn {
-    display: block;
-    width: 100%;
-    text-align: left;
-    font-size: 1em;
-    font-weight: 500;
-    border: none;
-    border-radius: 8px;
-    padding: 12px 16px;
-    margin-bottom: 12px;
-    cursor: pointer;
-    transition: background 0.15s;
-    color: #fff;
-}
-
-.quick-action-btn.all { background: #007bff; }
-.quick-action-btn.new { background: #ffc107; color: #222; }
-.quick-action-btn.scheduled { background: #17a2b8; }
-.quick-action-btn.inprogress { background:rgb(233, 36, 5); }
-.quick-action-btn.completed { background:rgb(63, 253, 0); color: #222; border: 1px solid #e0e0e0; }
-
-.quick-action-btn:hover {
-    filter: brightness(0.95);
-}
-
-/* Tabel dengan garis */
-.table-wo {
-    width: 100%;
-    border-collapse: collapse;
-    background: #fff;
-}
-
-.table-wo th, .table-wo td {
-    border: 1px solid #e0e0e0;
-    padding: 10px 14px;
-    text-align: left;
-    vertical-align: middle;
-}
-
-/* Header lebih tebal */
-.table-wo th {
-    background: #fafbfc;
-    font-weight: bold;
-}
-
-/* Scrollable container */
-.table-container-scroll {
-    max-height: 540px;
-    overflow-y: auto;
-    border-radius: 10px;
-    box-shadow: 0 1px 8px rgba(0,0,0,0.03);
-    background: #fff;
-    margin-bottom: 20px;
-}
-
-/* Responsive design */
-    @media (max-width: 768px) {
-        .admin-action-buttons {
-            gap: 2px;
+        body {
+        background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+        min-height: 100vh;
+        margin: 0;
+        font-family: 'Segoe UI', Arial, sans-serif;
         }
         
-        .btn-admin-action {
-            font-size: 9px;
-            padding: 3px 6px;
+        .user-role-admin-ikr {
+            background-color: #6f42c1 !important;
+        }
+
+        .dashboard-admin-ikr-grid {
+            display: grid;
+            grid-template-columns: 320px 1fr; 
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .admin-action-column {
+            position: sticky;
+            top: 20px;
+        }
+
+        @media (max-width: 992px) {
+            .dashboard-admin-ikr-grid {
+                grid-template-columns: 1fr;
+            }
+            .admin-action-column {
+                position: static;
+            }
+        }
+
+        .stat-new {
+            background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        }
+
+        .stat-scheduled {
+            background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+        }
+
+        .stat-progress {
+            background: linear-gradient(135deg, #fd7e14 0%, #dc3545 100%);
+        }
+
+        .stat-completed {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .stat-today {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+        }
+
+        .technician-summary {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #6f42c1;
+        }
+
+        .technician-summary h4 {
+            margin-top: 0;
+            color: #6f42c1;
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+
+        .workload-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
         }
 
         .workload-item {
-            padding: 6px 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: white;
+            border-radius: 6px;
+            border: 1px solid #dee2e6;
         }
 
         .tech-name {
-            font-size: 13px;
+            font-weight: 500;
+            color: #495057;
+            font-size: 14px;
         }
 
         .workload-count {
-            font-size: 11px;
-            padding: 3px 6px;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 12px;
         }
-    }
+
+        .low-load {
+            background-color: #d1edff;
+            color: #0c5460;
+        }
+
+        .medium-load {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .high-load {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .admin-action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 100%;
+        }
+
+        .btn-admin-action {
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .btn-schedule {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        .btn-edit {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        .btn-reassign {
+            background-color: #6c757d;
+            color: white;
+        }
+
+        .btn-contact {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .btn-forward {
+            background-color: #6f42c1;
+            color: white;
+        }
+
+        .btn-report {
+            background-color: #fd7e14;
+            color: white;
+        }
+
+        .btn-admin-action:hover {
+            transform: scale(1.05);
+            opacity: 0.9;
+        }
+
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .close {
+            position: absolute;
+            right: 15px;
+            top: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #dc3545;
+        }
+
+        .customer-info {
+            margin-bottom: 6px;
+        }
+
+        .issue-info {
+            font-size: 12px;
+        }
+
+        .quick-actions-box {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            padding: 24px 18px 18px 18px;
+            margin-bottom: 30px;
+            min-width: 240px;
+        }
+
+        .quick-actions-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+
+        .quick-actions-divider {
+            border: none;
+            border-top: 1.5px solid #eee;
+            margin: 0 0 18px 0;
+        }
+
+        .quick-action-btn {
+            display: block;
+            width: 100%;
+            text-align: left;
+            font-size: 1em;
+            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: background 0.15s;
+            color: #fff;
+        }
+
+        .quick-action-btn.all { background: #007bff; }
+        .quick-action-btn.new { background: #ffc107; color: #222; }
+        .quick-action-btn.scheduled { background: #17a2b8; }
+        .quick-action-btn.inprogress { background:rgb(233, 36, 5); }
+        .quick-action-btn.completed { background:rgb(63, 253, 0); color: #222; border: 1px solid #e0e0e0; }
+
+        .quick-action-btn:hover {
+            filter: brightness(0.95);
+        }
+
+        .table-wo {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+        }
+
+        .table-wo th, .table-wo td {
+            border: 1px solid #e0e0e0;
+            padding: 10px 14px;
+            text-align: left;
+            vertical-align: middle;
+        }
+
+        .table-wo th {
+            background: #fafbfc;
+            font-weight: bold;
+        }
+
+        .table-container-scroll {
+            max-height: 540px;
+            overflow-y: auto;
+            border-radius: 10px;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.03);
+            background: #fff;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .admin-action-buttons {
+                gap: 2px;
+            }
+            
+            .btn-admin-action {
+                font-size: 9px;
+                padding: 3px 6px;
+            }
+
+            .workload-item {
+                padding: 6px 10px;
+            }
+
+            .tech-name {
+                font-size: 13px;
+            }
+
+            .workload-count {
+                font-size: 11px;
+                padding: 3px 6px;
+            }
+        }
     </style>
 
 </body>

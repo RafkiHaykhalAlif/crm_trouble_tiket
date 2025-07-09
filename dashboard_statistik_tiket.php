@@ -1,14 +1,10 @@
 <?php
 include 'config/db_connect.php';
-// session_start();  // HAPUS atau KOMENTARI baris ini!
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'Customer Care') {
     header('Location: login.php');
     exit();
 }
 
-// --- STATISTIK COMPREHENSIVE UNTUK CUSTOMER CARE ---
-
-// 1. Statistik Overall Tickets
 $sql_overall_stats = "SELECT 
     COUNT(*) as total_tickets,
     SUM(CASE WHEN status = 'Open' THEN 1 ELSE 0 END) as cc_progress,
@@ -21,7 +17,6 @@ FROM tr_tickets";
 $result_overall = mysqli_query($conn, $sql_overall_stats);  
 $overall_stats = mysqli_fetch_assoc($result_overall);
 
-// 2. Statistik Kategori Gangguan (Enhanced)
 $sql_category_stats = "SELECT 
     SUM(CASE WHEN title LIKE '%mati%' OR title LIKE '%putus%' OR title LIKE '%no internet%' OR title LIKE '%tidak konek%' THEN 1 ELSE 0 END) as connectivity_issues,
     SUM(CASE WHEN title LIKE '%lambat%' OR title LIKE '%lemot%' OR title LIKE '%pelan%' THEN 1 ELSE 0 END) as speed_issues,
@@ -31,7 +26,6 @@ FROM tr_tickets";
 $result_category = mysqli_query($conn, $sql_category_stats);
 $category_stats = mysqli_fetch_assoc($result_category);
 
-// 3. Statistik SLA Performance (Enhanced)
 $sql_sla_stats = "SELECT 
     COUNT(*) as total_closed,
     SUM(CASE WHEN TIMESTAMPDIFF(HOUR, created_at, closed_at) <= 4 THEN 1 ELSE 0 END) as within_4h,
@@ -43,11 +37,9 @@ WHERE status = 'Closed - Solved' AND closed_at IS NOT NULL";
 $result_sla = mysqli_query($conn, $sql_sla_stats);
 $sla_stats = mysqli_fetch_assoc($result_sla);
 
-// Calculate SLA percentages
 $sla_4h_percentage = ($sla_stats['total_closed'] > 0) ? round(($sla_stats['within_4h'] * 100) / $sla_stats['total_closed']) : 0;
 $sla_24h_percentage = ($sla_stats['total_closed'] > 0) ? round(($sla_stats['within_24h'] * 100) / $sla_stats['total_closed']) : 0;
 
-// 4. Statistik Harian
 $sql_daily_stats = "SELECT 
     COUNT(*) as tickets_today,  
     SUM(CASE WHEN status LIKE 'Closed%' THEN 1 ELSE 0 END) as closed_today,
@@ -57,7 +49,6 @@ WHERE DATE(created_at) = CURDATE()";
 $result_daily = mysqli_query($conn, $sql_daily_stats);
 $daily_stats = mysqli_fetch_assoc($result_daily);
 
-// 5. Statistik Work Order Progress
 $sql_wo_stats = "SELECT 
     COUNT(*) as total_work_orders,
     SUM(CASE WHEN status = 'Pending' THEN 1 ELSE 0 END) as pending_wo,
@@ -68,7 +59,6 @@ FROM tr_work_orders";
 $result_wo = mysqli_query($conn, $sql_wo_stats);
 $wo_stats = mysqli_fetch_assoc($result_wo);
 
-// 6. Teknisi Performance Summary
 $sql_technician_stats = "SELECT 
     COUNT(DISTINCT wo.assigned_to_vendor_id) as active_technicians,
     COUNT(CASE WHEN wo.status = 'Completed' AND DATE(wo.created_at) >= DATE_SUB(CURDATE(), INTERVAL 7 DAY) THEN 1 END) as completed_this_week
@@ -77,7 +67,6 @@ WHERE wo.assigned_to_vendor_id IS NOT NULL";
 $result_tech = mysqli_query($conn, $sql_technician_stats);
 $tech_stats = mysqli_fetch_assoc($result_tech);
 
-// 7. Recent Activity (untuk animasi real-time)
 $sql_recent = "SELECT title, status, created_at FROM tr_tickets ORDER BY created_at DESC LIMIT 5";
 $result_recent = mysqli_query($conn, $sql_recent);
 $recent_tickets = [];
@@ -85,7 +74,6 @@ while($row = mysqli_fetch_assoc($result_recent)) {
     $recent_tickets[] = $row;
 }
 
-// Statistik Tiket Berdasarkan Kota
 $sql_city_stats = "
     SELECT 
         c.kota AS kota,
@@ -103,7 +91,6 @@ while ($row = mysqli_fetch_assoc($result_city_stats)) {
     $city_stats[] = $row;
 }
 
-// Statistik Complain Channel
 $sql_channel_stats = "
     SELECT 
         complain_channel, 
@@ -119,7 +106,6 @@ while ($row = mysqli_fetch_assoc($result_channel_stats)) {
     $channel_stats[] = $row;
 }
 
-// Ambil bulan & tahun dari input, default ke bulan ini
 if (isset($_GET['bulan']) && preg_match('/^\d{4}-\d{2}$/', $_GET['bulan'])) {
     $selected_month = $_GET['bulan'];
 } else {
@@ -143,7 +129,6 @@ while ($row = mysqli_fetch_assoc($result_daily_ticket_stats)) {
     $daily_ticket_stats[] = $row;
 }
 
-// Siapkan data untuk Chart.js
 $chart_labels = [];
 $chart_maintenance = [];
 $chart_dismantle = [];
@@ -153,7 +138,6 @@ foreach ($daily_ticket_stats as $row) {
     $chart_dismantle[] = (int)$row['dismantle_count'];
 }
 
-// Total Maintenance dan Dismantle per Bulan
 $total_maintenance_bulan = 0;
 $total_dismantle_bulan = 0;
 $total_tiket_bulan = 0;
@@ -180,7 +164,6 @@ foreach ($daily_ticket_stats as $row) {
 
 <body>
     <div class="container-fluid px-4">
-        <!-- Header -->
         <div class="dashboard-header">
             <div class="dashboard-title">
                 <i class="fas fa-chart-line me-3"></i>
@@ -191,7 +174,6 @@ foreach ($daily_ticket_stats as $row) {
             </div>
         </div>
 
-        <!-- Key Performance Indicators -->
         <div class="section-header">
             <div class="section-title">
                 <i class="fas fa-tachometer-alt me-2"></i>
@@ -277,7 +259,6 @@ foreach ($daily_ticket_stats as $row) {
             </div>
         </div>
 
-        <!-- Workflow Progress -->
         <div class="section-header">
             <div class="section-title">
                 <i class="fas fa-project-diagram me-2"></i>
@@ -320,7 +301,6 @@ foreach ($daily_ticket_stats as $row) {
             </div>
         </div>
 
-        <!-- Field Operations Status -->
         <div class="section-header">
             <div class="section-title">
                 <i class="fas fa-hard-hat me-2"></i>
@@ -356,7 +336,6 @@ foreach ($daily_ticket_stats as $row) {
             </div>
         </div>
 
-        <!-- Statistics Tables -->
         <div class="row mt-5">
             <div class="col-lg-6">
                 <div class="stats-table-container">
@@ -464,7 +443,6 @@ foreach ($daily_ticket_stats as $row) {
             </div>
         </div>
 
-        <!-- Recent Activity -->
         <div class="section-header">
             <div class="section-title">
                 <i class="fas fa-clock me-2"></i>
@@ -558,7 +536,6 @@ foreach ($daily_ticket_stats as $row) {
             </div>
         </div>
 
-        <!-- Performance Summary -->
         <div class="section-header">
             <div class="section-title">
                 <i class="fas fa-chart-bar me-2"></i>
@@ -611,69 +588,67 @@ foreach ($daily_ticket_stats as $row) {
             </div>
         </div>
 
-        <!-- Statistik Tiket Per Hari Dalam Bulan Ini -->
-            <div class="section-header mt-5">
-                <div class="section-title">
-                    <i class="fas fa-calendar-alt me-2"></i>
-                    Statistik Tiket Per Hari 
-                </div>
-                <div class="section-description">Jumlah tiket Maintenance & Dismantle per hari</div>
+        <div class="section-header mt-5">
+            <div class="section-title">
+                <i class="fas fa-calendar-alt me-2"></i>
+                Statistik Tiket Per Hari 
             </div>
+            <div class="section-description">Jumlah tiket Maintenance & Dismantle per hari</div>
+        </div>
 
-            <form method="get" class="mb-4">
-                <label for="bulan" class="form-label fw-bold">Pilih Bulan:</label>
-                <input type="month" id="bulan" name="bulan" class="form-control d-inline-block w-auto" value="<?php echo isset($_GET['bulan']) ? $_GET['bulan'] : date('Y-m'); ?>">
-                <button type="submit" class="btn btn-primary ms-2">Tampilkan</button>
-            </form>
+        <form method="get" class="mb-4">
+            <label for="bulan" class="form-label fw-bold">Pilih Bulan:</label>
+            <input type="month" id="bulan" name="bulan" class="form-control d-inline-block w-auto" value="<?php echo isset($_GET['bulan']) ? $_GET['bulan'] : date('Y-m'); ?>">
+            <button type="submit" class="btn btn-primary ms-2">Tampilkan</button>
+        </form>
 
-            <div class="stats-table-container mb-4">
-                <canvas id="chartTiketHarian" height="80"></canvas>
-            </div>
+        <div class="stats-table-container mb-4">
+            <canvas id="chartTiketHarian" height="80"></canvas>
+        </div>
 
-            <div class="stats-table-container">
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle">
-                        <thead class="table-primary">
-                            <tr>
-                                <th>Tanggal</th>
-                                <th>Maintenance</th>
-                                <th>Dismantle</th>
-                                <th>Total Tiket</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (count($daily_ticket_stats) > 0): ?>
-                                <?php foreach ($daily_ticket_stats as $row): ?>
-                                    <tr>
-                                        <td><?php echo date('d M Y', strtotime($row['tanggal'])); ?></td>
-                                        <td><span class="badge bg-warning text-dark"><?php echo $row['maintenance_count']; ?></span></td>
-                                        <td><span class="badge bg-info text-dark"><?php echo $row['dismantle_count']; ?></span></td>
-                                        <td>
-                                            <span class="badge bg-primary">
-                                                <?php echo $row['maintenance_count'] + $row['dismantle_count']; ?>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
+        <div class="stats-table-container">
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Tanggal</th>
+                            <th>Maintenance</th>
+                            <th>Dismantle</th>
+                            <th>Total Tiket</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($daily_ticket_stats) > 0): ?>
+                            <?php foreach ($daily_ticket_stats as $row): ?>
                                 <tr>
-                                    <td colspan="4" class="text-center text-muted">Belum ada data tiket bulan ini.</td>
+                                    <td><?php echo date('d M Y', strtotime($row['tanggal'])); ?></td>
+                                    <td><span class="badge bg-warning text-dark"><?php echo $row['maintenance_count']; ?></span></td>
+                                    <td><span class="badge bg-info text-dark"><?php echo $row['dismantle_count']; ?></span></td>
+                                    <td>
+                                        <span class="badge bg-primary">
+                                            <?php echo $row['maintenance_count'] + $row['dismantle_count']; ?>
+                                        </span>
+                                    </td>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                        <tfoot>
+                            <?php endforeach; ?>
+                        <?php else: ?>
                             <tr>
-                                <th>Total Bulan Ini</th>
-                                <td><span class="badge bg-warning text-dark"><?php echo $total_maintenance_bulan; ?></span></td>
-                                <td><span class="badge bg-info text-dark"><?php echo $total_dismantle_bulan; ?></span></td>
-                                <td><span class="badge bg-primary"><?php echo $total_tiket_bulan; ?></span></td>
+                                <td colspan="4" class="text-center text-muted">Belum ada data tiket bulan ini.</td>
                             </tr>
-                        </tfoot>
-                    </table>
-                </div>
-            </div>        
-
-        <!-- Statistik Tiket Berdasarkan Kota -->
+                        <?php endif; ?>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th>Total Bulan Ini</th>
+                            <td><span class="badge bg-warning text-dark"><?php echo $total_maintenance_bulan; ?></span></td>
+                            <td><span class="badge bg-info text-dark"><?php echo $total_dismantle_bulan; ?></span></td>
+                            <td><span class="badge bg-primary"><?php echo $total_tiket_bulan; ?></span></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+          
         <div class="section-header mt-5">
             <div class="section-title">
                 <i class="fas fa-city me-2"></i>
@@ -715,7 +690,6 @@ foreach ($daily_ticket_stats as $row) {
             </div>
         </div>
     
-        <!-- Statistik Complain Channel -->
         <div class="section-header mt-5">
             <div class="section-title">
                 <i class="fas fa-headset me-2"></i>
@@ -753,9 +727,6 @@ foreach ($daily_ticket_stats as $row) {
             </div>
         </div>
 
-
-
-        <!-- Footer Actions -->
         <div class="text-center mt-5 mb-4">
             <a href="dashboard.php" class="btn btn-secondary btn-lg">
                 <i class="fas fa-arrow-left me-2"></i>
@@ -763,7 +734,6 @@ foreach ($daily_ticket_stats as $row) {
             </a>
         </div>
 
-        <!-- Auto Refresh Notification -->
         <div class="text-center mt-3 mb-2">
             <small class="text-muted">
                 <i class="fas fa-sync-alt me-1"></i>
@@ -772,7 +742,6 @@ foreach ($daily_ticket_stats as $row) {
         </div>
     </div> 
 
-    <!-- Live timestamp display -->
     <div class="fixed-bottom">
         <div class="container-fluid">
             <div class="text-end pe-3 pb-2">
@@ -781,58 +750,56 @@ foreach ($daily_ticket_stats as $row) {
         </div>
     </div>  
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
     <script>
-    const ctx = document.getElementById('chartTiketHarian').getContext('2d');
-    const chartTiketHarian = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: <?php echo json_encode($chart_labels); ?>,
-            datasets: [
-                {
-                    label: 'Maintenance',
-                    data: <?php echo json_encode($chart_maintenance); ?>,
-                    borderColor: '#ffc107',
-                    backgroundColor: 'rgba(255,193,7,0.1)',
-                    tension: 0.3,
-                    fill: true
-                },
-                {
-                    label: 'Dismantle',
-                    data: <?php echo json_encode($chart_dismantle); ?>,
-                    borderColor: '#17a2b8',
-                    backgroundColor: 'rgba(23,162,184,0.1)',
-                    tension: 0.3,
-                    fill: true
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'top' },
-                title: {
-                    display: true,
-                    text: 'Statistik Tiket Per Hari Bulan <?php echo date("F Y", strtotime($selected_year . "-" . $selected_month_num . "-01")); ?>'
-                }
+        const ctx = document.getElementById('chartTiketHarian').getContext('2d');
+        const chartTiketHarian = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: <?php echo json_encode($chart_labels); ?>,
+                datasets: [
+                    {
+                        label: 'Maintenance',
+                        data: <?php echo json_encode($chart_maintenance); ?>,
+                        borderColor: '#ffc107',
+                        backgroundColor: 'rgba(255,193,7,0.1)',
+                        tension: 0.3,
+                        fill: true
+                    },
+                    {
+                        label: 'Dismantle',
+                        data: <?php echo json_encode($chart_dismantle); ?>,
+                        borderColor: '#17a2b8',
+                        backgroundColor: 'rgba(23,162,184,0.1)',
+                        tension: 0.3,
+                        fill: true
+                    }
+                ]
             },
-            scales: {
-                y: { beginAtZero: true, precision: 0 }
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                    title: {
+                        display: true,
+                        text: 'Statistik Tiket Per Hari Bulan <?php echo date("F Y", strtotime($selected_year . "-" . $selected_month_num . "-01")); ?>'
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, precision: 0 }
+                }
             }
-        }
-    });
+        });
     </script>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Auto refresh setiap 5 menit (300000 ms)
         setTimeout(function() {
             location.reload();
         }, 300000);
 
-        // Animation untuk angka yang berubah
         function animateNumbers() {
             const numbers = document.querySelectorAll('.kpi-number, .field-number');
             numbers.forEach(number => {
@@ -857,12 +824,10 @@ foreach ($daily_ticket_stats as $row) {
             });
         }
 
-        // Jalankan animasi saat halaman dimuat
         document.addEventListener('DOMContentLoaded', function() {
             setTimeout(animateNumbers, 500);
         });
 
-        // Highlight cards on hover
         document.querySelectorAll('.kpi-card, .field-card').forEach(card => {
             card.addEventListener('mouseenter', function() {
                 this.style.transform = 'translateY(-8px) scale(1.02)';
@@ -873,7 +838,6 @@ foreach ($daily_ticket_stats as $row) {
             });
         });
 
-        // Update timestamp
         function updateTimestamp() {
             const now = new Date();
             const timestamp = now.toLocaleString('id-ID', {
@@ -891,11 +855,9 @@ foreach ($daily_ticket_stats as $row) {
             }
         }
 
-        // Update timestamp setiap detik
         setInterval(updateTimestamp, 1000);
-        updateTimestamp(); // Panggil sekali saat load
+        updateTimestamp(); 
 
-        // Smooth scroll untuk anchor links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
@@ -911,7 +873,7 @@ foreach ($daily_ticket_stats as $row) {
     </script>
 
 
-<style>
+    <style>
         :root {
             --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
@@ -988,7 +950,6 @@ foreach ($daily_ticket_stats as $row) {
             font-size: 1rem;
         }
 
-        /* KPI Cards */
         .kpi-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -1084,7 +1045,6 @@ foreach ($daily_ticket_stats as $row) {
             color: #721c24;
         }
 
-        /* Workflow Progress */
         .workflow-container {
             background: white;
             border-radius: 20px;
@@ -1152,7 +1112,6 @@ foreach ($daily_ticket_stats as $row) {
             color: #495057;
         }
 
-        /* Field Operations */
         .field-ops-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -1198,7 +1157,6 @@ foreach ($daily_ticket_stats as $row) {
             color: #6c757d;
         }
 
-        /* Statistics Tables */
         .stats-table-container {
             background: white;
             border-radius: 20px;
@@ -1230,7 +1188,6 @@ foreach ($daily_ticket_stats as $row) {
             background-color: #f8f9fa;
         }
 
-        /* Tambahkan di <style> */
         .table tfoot th, .table tfoot td {
             font-weight: 600;
             background: #fff;
@@ -1240,14 +1197,12 @@ foreach ($daily_ticket_stats as $row) {
             padding: 1rem;
         }
 
-        /* Table Badges */
         .table .badge {
             font-size: 0.8rem;
             padding: 0.4rem 0.6rem;
             border-radius: 0.5rem;
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .dashboard-title {
                 font-size: 2rem;
@@ -1274,7 +1229,6 @@ foreach ($daily_ticket_stats as $row) {
             }
         }
 
-        /* Animation */
         @keyframes fadeInUp {
             from {
                 opacity: 0;

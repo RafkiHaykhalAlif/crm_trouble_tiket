@@ -14,7 +14,6 @@ if (!$wo_id || !$dispatch_notes || !$dispatch_id) {
     exit();
 }
 
-// Update status WO ke "Waiting For BOR Review", isi reviewed_by_dispatch_id dan reviewed_at
 $sql = "UPDATE tr_work_orders 
         SET status = 'Waiting For BOR Review', 
             dispatch_review_notes = ?, 

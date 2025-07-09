@@ -1,5 +1,4 @@
 <?php
-// filepath: d:\XAMPP\htdocs\crm_trouble_tiket\proses_admin_edit_schedule.php
 include 'config/db_connect.php';
 session_start();
 

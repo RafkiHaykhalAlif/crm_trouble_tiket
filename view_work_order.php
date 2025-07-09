@@ -1,13 +1,11 @@
 <?php
 include 'config/db_connect.php';
 
-// Cek apakah user sudah login
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// Cek parameter ID work order
 if (!isset($_GET['id']) || empty($_GET['id'])) {
     header('Location: dashboard_dispatch.php');
     exit();
@@ -15,7 +13,6 @@ if (!isset($_GET['id']) || empty($_GET['id'])) {
 
 $wo_id = (int)$_GET['id'];
 
-// Query untuk ambil detail work order lengkap
 $sql_wo_detail = "SELECT 
     wo.id,
     wo.wo_code,
@@ -56,7 +53,6 @@ if (mysqli_num_rows($result_wo) == 0) {
 
 $wo = mysqli_fetch_assoc($result_wo);
 
-// Query untuk ambil history ticket yang terkait
 $sql_updates = "SELECT 
     tu.update_type,
     tu.description,
@@ -71,7 +67,6 @@ ORDER BY tu.created_at DESC";
 $result_updates = mysqli_query($conn, $sql_updates);
 $updates = mysqli_fetch_all($result_updates, MYSQLI_ASSOC);
 
-// Fungsi helper untuk format tanggal Indonesia
 function formatTanggalIndonesia($datetime) {
     if (!$datetime) return '-';
     
@@ -115,7 +110,6 @@ function formatTanggalIndonesia($datetime) {
 
     <main class="container">
         
-        <!-- Tombol Kembali -->
         <div class="back-button-section">
             <?php 
             $back_url = 'dashboard.php';
@@ -132,7 +126,6 @@ function formatTanggalIndonesia($datetime) {
 
         <div class="ticket-detail-grid">
             
-            <!-- Info Work Order -->
             <section class="card ticket-info-card">
                 <div class="card-header">
                     <h3>Informasi Work Order</h3>
@@ -215,7 +208,6 @@ function formatTanggalIndonesia($datetime) {
                     <?php endif; ?>
                 </div>
 
-                <!-- Action Buttons -->
                 <?php if ($_SESSION['user_role'] === 'Dispatch'): ?>
                 <div class="ticket-actions">
                     <?php if ($wo['wo_status'] == 'Pending'): ?>
@@ -237,7 +229,6 @@ function formatTanggalIndonesia($datetime) {
                 <?php endif; ?>
             </section>
 
-            <!-- Info Customer -->
             <section class="card customer-info-card">
                 <div class="card-header">
                     <h3>Informasi Customer</h3>
@@ -281,7 +272,6 @@ function formatTanggalIndonesia($datetime) {
 
         </div>
 
-        <!-- Timeline/History Ticket -->
         <section class="card timeline-card">
             <div class="card-header">
                 <h3>Riwayat Aktivitas Ticket & Work Order</h3>
@@ -328,14 +318,20 @@ function formatTanggalIndonesia($datetime) {
             </div>
         </section>
 
-    </div>
-</div>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            }
+    </style>
 
-<style>
-body {
-    background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
-    min-height: 100vh;
-    margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    }
-</style>
+
+</main>
+</body>
+</html>
+
+
+    
+

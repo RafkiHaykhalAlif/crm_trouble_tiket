@@ -1,5 +1,4 @@
 <?php
-// filepath: d:\XAMPP\htdocs\crm_trouble_tiket\wilayah_proxy.php
 
 header('Content-Type: application/json');
 

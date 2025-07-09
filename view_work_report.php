@@ -1,13 +1,11 @@
 <?php
 include 'config/db_connect.php';
 
-// Cek apakah user sudah login
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// Cek parameter ID work order
 if (!isset($_GET['wo_id']) || empty($_GET['wo_id'])) {
     header('Location: dashboard_dispatch.php');
     exit();
@@ -15,7 +13,6 @@ if (!isset($_GET['wo_id']) || empty($_GET['wo_id'])) {
 
 $wo_id = (int)$_GET['wo_id'];
 
-// Query untuk ambil detail work order dengan report
 $sql_wo_report = "SELECT 
     wo.id,
     wo.wo_code,
@@ -69,12 +66,10 @@ if (mysqli_num_rows($result_wo) == 0) {
 
 $wo = mysqli_fetch_assoc($result_wo);
 
-// Parse JSON data
 $equipment_data = $wo['equipment_replaced'] ? json_decode($wo['equipment_replaced'], true) : null;
 $equipment_removed = $wo['equipment_removed'] ?? null;
 $materials_data = $wo['materials_used'] ? json_decode($wo['materials_used'], true) : null;
 
-// Fungsi helper untuk format tanggal Indonesia
 function formatTanggalIndonesia($datetime) {
     if (!$datetime) return '-';
     
@@ -131,7 +126,6 @@ function formatDuration($minutes) {
 
     <main class="container">
         
-        <!-- Tombol Kembali -->
         <div class="back-button-section">
             <?php 
             $back_url = 'dashboard.php';
@@ -158,7 +152,7 @@ function formatDuration($minutes) {
             <div class="report-grid">
                 <div class="card">
                     <div style="text-align: center; padding: 40px;">
-                        <div style="font-size: 48px; margin-bottom: 10px;">⏳</div>
+                        <div style="font-size: 48px; margin-bottom: 10px;"></div>
                         <h4>Work Order Belum Selesai</h4>
                         <p>Laporan detail akan tersedia setelah teknisi menyelesaikan pekerjaan.</p>
                         <p><strong>Status saat ini:</strong> <?php echo htmlspecialchars($wo['wo_status']); ?></p>
@@ -167,7 +161,6 @@ function formatDuration($minutes) {
             </div>
             <?php endif; ?>
 
-        <!-- Surat Laporan Pekerjaan Work Order -->
         <div class="wo-letter">
             <div class="wo-letter-header">
                 <h2 style="margin:0;">LAPORAN PEKERJAAN WO</h2>
@@ -301,206 +294,206 @@ function formatDuration($minutes) {
     </main>
 
     <style>
-    body {
-    background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
-    min-height: 100vh;
-    margin: 0;
-    font-family: 'Segoe UI', Arial, sans-serif;
-    }
-    
-    .user-role-dispatch {
-        background-color: #17a2b8 !important;
-    }
-
-    .user-role-bor {
-        background-color: #fd7e14 !important;
-    }
-
-    .status-badges {
-        display: flex;
-        gap: 10px;
-        font-size: 1rem;
-    }
-
-    @media (max-width: 992px) {
-        .report-grid {
-            grid-template-columns: 1fr;
-        }
-    }
-
-    .timing-info {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        margin-top: 20px;
-        padding: 15px;
-        background-color: #f8f9fa;
-        border-radius: 6px;
-        border-left: 4px solid #17a2b8;
-    }
-
-    .timing-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .timing-item label {
-        font-size: 14px;
-        color: #495057;
-    }
-
-    .equipment-item {
-        margin-bottom: 20px;
-    }
-
-    .equipment-item h4 {
-        margin: 0 0 8px 0;
-        color: #495057;
-        font-size: 1rem;
-    }
-
-    .equipment-details {
-        padding: 12px;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-        border-left: 3px solid #28a745;
-        line-height: 1.5;
-    }
-
-    .measurements-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-    }
-
-    .measurement-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px;
-        background-color: #f8f9fa;
-        border-radius: 4px;
-    }
-
-    .measurement-item.full-width {
-        grid-column: 1 / -1;
-    }
-
-    .measurement-item label {
-        font-weight: 600;
-        color: #495057;
-    }
-
-    .measurement-value {
-        font-weight: 500;
-        color: #495057;
-    }
-
-    .materials-table {
-        overflow-x: auto;
-    }
-
-    .satisfaction-badge {
-        text-align: center;
-        padding: 15px;
-        margin-bottom: 15px;
-        background-color: #f8f9fa;
-        border-radius: 8px;
-    }
-
-    .customer-notes h4 {
-        margin-bottom: 10px;
-        color: #495057;
-    }
-
-    .no-data {
-        text-align: center;
-        color: #6c757d;
-        font-style: italic;
-        padding: 20px;
-    }
-
-    .info-row {
-        display: flex;
-        margin-bottom: 15px;
-        align-items: flex-start;
-    }
-
-    .info-row label {
-        min-width: 140px;
-        font-weight: 600;
-        color: #495057;
-        margin-right: 15px;
-        flex-shrink: 0;
-    }
-
-    .description-box {
-        background-color: #f8f9fa;
-        padding: 12px;
-        border-radius: 4px;
-        border-left: 4px solid #007bff;
-        line-height: 1.5;
-        max-width: 100%;
-        word-wrap: break-word;
-    }
-
-    .wo-letter {
-        margin: 36px auto 48px auto;
-        max-width: 1100px;
-        min-width: 0;
-        background: #fff;
-        border: 1.5px solid #1976d2;
-        border-radius: 12px;
-        padding: 48px 60px 40px 60px;
-        box-shadow: 0 4px 24px #1976d233;
+        body {
+        background: linear-gradient(135deg, #0d47a1 0%, #1976d2 100%);
+        min-height: 100vh;
+        margin: 0;
         font-family: 'Segoe UI', Arial, sans-serif;
-        color: #222;
-    }
+        }
+        
+        .user-role-dispatch {
+            background-color: #17a2b8 !important;
+        }
 
-    .wo-letter-header {
-        text-align: center;
-        margin-bottom: 24px;
-    }
+        .user-role-bor {
+            background-color: #fd7e14 !important;
+        }
 
-    .wo-letter-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 8px;
-        margin-bottom: 8px;
-    }
+        .status-badges {
+            display: flex;
+            gap: 10px;
+            font-size: 1rem;
+        }
 
-    .wo-letter-table th, .wo-letter-table td {
-        padding: 4px 8px;
-        border: 1px solid #ddd;
-        vertical-align: top;
-        font-size: 14px;
-    }
+        @media (max-width: 992px) {
+            .report-grid {
+                grid-template-columns: 1fr;
+            }
+        }
 
-    .wo-letter-sign {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 40px;
-        gap: 40px;
-    }
+        .timing-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #17a2b8;
+        }
 
-    .wo-letter-sign div {
-        text-align: center;
-        width: 40%;
-    }
+        .timing-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
 
-    @media (max-width: 600px) {
+        .timing-item label {
+            font-size: 14px;
+            color: #495057;
+        }
+
+        .equipment-item {
+            margin-bottom: 20px;
+        }
+
+        .equipment-item h4 {
+            margin: 0 0 8px 0;
+            color: #495057;
+            font-size: 1rem;
+        }
+
+        .equipment-details {
+            padding: 12px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            border-left: 3px solid #28a745;
+            line-height: 1.5;
+        }
+
+        .measurements-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .measurement-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .measurement-item.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .measurement-item label {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .measurement-value {
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .materials-table {
+            overflow-x: auto;
+        }
+
+        .satisfaction-badge {
+            text-align: center;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .customer-notes h4 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .no-data {
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+            padding: 20px;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+
+        .info-row label {
+            min-width: 140px;
+            font-weight: 600;
+            color: #495057;
+            margin-right: 15px;
+            flex-shrink: 0;
+        }
+
+        .description-box {
+            background-color: #f8f9fa;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 4px solid #007bff;
+            line-height: 1.5;
+            max-width: 100%;
+            word-wrap: break-word;
+        }
+
         .wo-letter {
-            padding: 16px 6vw;
+            margin: 36px auto 48px auto;
+            max-width: 1100px;
+            min-width: 0;
+            background: #fff;
+            border: 1.5px solid #1976d2;
+            border-radius: 12px;
+            padding: 48px 60px 40px 60px;
+            box-shadow: 0 4px 24px #1976d233;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #222;
         }
-        .wo-letter-sign {
-            flex-direction: column;
-            gap: 24px;
+
+        .wo-letter-header {
+            text-align: center;
+            margin-bottom: 24px;
         }
-        .wo-letter-sign div {
+
+        .wo-letter-table {
             width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+            margin-bottom: 8px;
         }
-    }
+
+        .wo-letter-table th, .wo-letter-table td {
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            vertical-align: top;
+            font-size: 14px;
+        }
+
+        .wo-letter-sign {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            gap: 40px;
+        }
+
+        .wo-letter-sign div {
+            text-align: center;
+            width: 40%;
+        }
+
+        @media (max-width: 600px) {
+            .wo-letter {
+                padding: 16px 6vw;
+            }
+            .wo-letter-sign {
+                flex-direction: column;
+                gap: 24px;
+            }
+            .wo-letter-sign div {
+                width: 100%;
+            }
+        }
     </style>
 
 </body>
