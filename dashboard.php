@@ -167,7 +167,14 @@ if ($search_ticket !== '') {
                                                     $created_at = new DateTime($ticket['created_at']);
                                                     $closed_at = !empty($ticket['closed_at']) ? new DateTime($ticket['closed_at']) : new DateTime();
                                                     $interval = $created_at->diff($closed_at);
-                                                    $age_text = sprintf('%dd %dh %dm', $interval->d, $interval->h, $interval->i);
+
+                                                    $parts = [];
+                                                    if ($interval->d > 0) $parts[] = $interval->d . 'd';
+                                                    if ($interval->h > 0) $parts[] = $interval->h . 'h';
+                                                    if ($interval->i > 0) $parts[] = $interval->i . 'm';
+                                                    if (empty($parts)) $parts[] = '0m';
+
+                                                    $age_text = implode(' ', $parts);
                                                 ?>
                                                 <span class="ticket-age <?php echo ($interval->d > 1) ? 'age-warning' : ''; ?>">
                                                     <?php echo $age_text; ?>
@@ -207,26 +214,27 @@ if ($search_ticket !== '') {
                                             <td>
                                                 <?php
                                                     $created_at = new DateTime($ticket['created_at']);
-                                                    $now = new DateTime();
-                                                    $age = $now->diff($created_at);
-                                                    if ($age->d > 0) {
-                                                        $age_text = $age->d . 'd';
-                                                    } elseif ($age->h > 0) {
-                                                        $age_text = $age->h . 'h';
-                                                    } else {
-                                                        $age_text = $age->i . 'm';
-                                                    }
-                                                    ?>
-                                                    <span class="ticket-age <?php echo ($age->d > 1) ? 'age-warning' : ''; ?>">
-                                                        <?php echo $age_text; ?>
-                                                    </span>
+                                                    $closed_at = !empty($ticket['closed_at']) ? new DateTime($ticket['closed_at']) : new DateTime();
+                                                    $interval = $created_at->diff($closed_at);
+
+                                                    $parts = [];
+                                                    if ($interval->d > 0) $parts[] = $interval->d . 'd';
+                                                    if ($interval->h > 0) $parts[] = $interval->h . 'h';
+                                                    if ($interval->i > 0) $parts[] = $interval->i . 'm';
+                                                    if (empty($parts)) $parts[] = '0m';
+
+                                                    $age_text = implode(' ', $parts);
+                                                ?>
+                                                <span class="ticket-age <?php echo ($interval->d > 1) ? 'age-warning' : ''; ?>">
+                                                    <?php echo $age_text; ?>
+                                                </span>
                                             </td>
                                             <td class="action-buttons">
                                                 <?php if ($ticket['status'] == 'Open' || $ticket['status'] == 'On Progress - Customer Care'): ?>
-                                                    <button onclick="solveTicket(<?php echo $ticket['id']; ?>)" class="btn-action btn-solve" title="Selesaikan Ticket">✓ Solve</button>
-                                                    <button onclick="escalateTicket(<?php echo $ticket['id']; ?>)" class="btn-action btn-escalate" title="Escalate ke BOR">↗ BOR</button>
+                                                    <button onclick="solveTicket(<?php echo $ticket['id']; ?>)" class="btn-action btn-solve" title="Selesaikan Ticket">Solve Tiket</button>
+                                                    <button onclick="escalateTicket(<?php echo $ticket['id']; ?>)" class="btn-action btn-escalate" title="Escalate ke BOR">Escalate ke BOR</button>
                                                 <?php endif; ?>
-                                                <a href="view_ticket.php?id=<?php echo $ticket['id']; ?>" class="btn-action btn-view" title="Lihat Detail">View</a>
+                                                <a href="view_ticket.php?id=<?php echo $ticket['id']; ?>" class="btn-action btn-view" title="Lihat Detail">View Tiket</a>
                                             </td>
                                         </tr>
                                     <?php endforeach; endif; ?>
@@ -756,7 +764,31 @@ if ($search_ticket !== '') {
             gap: 10px;
             margin-bottom: 24px;
         }
-</style>
+
+        .table-ticket td:nth-child(6), .table-ticket th:nth-child(6) {
+            min-width: 90px;
+            max-width: 140px;
+            width: 120px;
+            text-align: center;
+            vertical-align: middle;
+            word-break: break-word;
+            white-space: normal;
+            padding: 8px 10px;
+        }
+
+        .ticket-age {
+            display: inline-block;
+            font-size: 1rem;
+            padding: 4px 12px;
+            border-radius: 14px;
+            background-color: #e9ecef;
+            color: #495057;
+            font-weight: 500;
+            line-height: 1.3;
+            min-width: 70px;
+            text-align: center;
+        }
+    </style>
 
 </body>
 </html>
