@@ -261,18 +261,18 @@ if (isset($_GET['status'])) {
                                                         </button>
                                                         <button onclick="dispatchTicket(<?php echo $ticket['id']; ?>)" 
                                                                 class="btn-bor-action btn-dispatch" title="Kirim ke Dispatch">
-                                                            Dispatch
+                                                            Escalate to Dispatch
                                                         </button>
                                                     
                                                     <?php elseif ($ticket['status'] == 'Waiting For BOR Review' && $ticket['wo_id'] && $ticket['reviewed_by_dispatch_id']): ?>
                                                         <button onclick="approveWO(<?php echo $ticket['wo_id']; ?>)" 
                                                                 class="btn-bor-action btn-approve" title="Approve & Close as Solved">
-                                                            Approve
+                                                            Close Tiket
                                                         </button>
                                                         <?php if (!empty($ticket['wo_id'])): ?>
                                                             <a href="view_work_report.php?wo_id=<?php echo $ticket['wo_id']; ?>" 
                                                                class="btn-bor-action btn-report" title="Lihat Report WO">
-                                                                Report
+                                                                View Report IKR
                                                             </a>
                                                         <?php endif; ?>
 
@@ -281,7 +281,7 @@ if (isset($_GET['status'])) {
                                                         <?php if (!empty($ticket['wo_id'])): ?>
                                                             <a href="view_work_report.php?wo_id=<?php echo $ticket['wo_id']; ?>" 
                                                                class="btn-bor-action btn-report" title="Lihat Report WO">
-                                                                Report
+                                                                View Report IKR
                                                             </a>
                                                         <?php endif; ?>
 
@@ -293,7 +293,7 @@ if (isset($_GET['status'])) {
                                                         <?php if (!empty($ticket['wo_id'])): ?>
                                                             <a href="view_work_report.php?wo_id=<?php echo $ticket['wo_id']; ?>" 
                                                                class="btn-bor-action btn-report" title="Lihat Report WO">
-                                                                Report
+                                                                View Report IKR
                                                             </a>
                                                         <?php endif; ?>
 

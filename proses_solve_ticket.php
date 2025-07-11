@@ -13,6 +13,7 @@ if (!isset($_GET['ticket_id']) || empty($_GET['ticket_id'])) {
 
 $ticket_id = (int)$_GET['ticket_id'];
 $user_id = $_SESSION['user_id'];
+date_default_timezone_set('Asia/Jakarta');
 $current_time = date('Y-m-d H:i:s');
 
 $check_sql = "SELECT id, status, ticket_code FROM tr_tickets WHERE id = '$ticket_id' AND (status = 'Open' OR status = 'On Progress - Customer Care')";

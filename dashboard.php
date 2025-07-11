@@ -13,7 +13,7 @@ if (isset($_GET['status']) && $_GET['status'] == 'sukses') {
     $message = '<div class="alert alert-success">Ticket baru berhasil dibuat!</div>';
 }
 
-$sql_get_tickets = "SELECT t.id, t.ticket_code, c.full_name, t.status, t.title, t.created_at, t.jenis_tiket
+$sql_get_tickets = "SELECT t.id, t.ticket_code, c.full_name, t.status, t.title, t.created_at, t.closed_at, t.jenis_tiket
                     FROM tr_tickets t
                     JOIN ms_customers c ON t.customer_id = c.id
                     ORDER BY t.created_at DESC";
@@ -146,7 +146,7 @@ if ($search_ticket !== '') {
                         </form>
                         <table class="table-ticket">
                             <thead>
-                                <tr><th>ID Tiket</th><th>Pelanggan</th><th>Jenis Tiket</th><th>Jenis Masalah</th><th>Status</th><th>Age</th><th>Aksi</th></tr>
+                                <tr><th>ID Tiket</th><th>Pelanggan</th><th>Jenis Tiket</th><th>Jenis Masalah</th><th>Status</th><th>Aging</th><th>Aksi</th></tr>
                             </thead>
                             <tbody>
                                 <?php if (empty($tickets)): ?>
@@ -164,27 +164,21 @@ if ($search_ticket !== '') {
                                             </td>
                                             <td>
                                                 <?php
-                                                    $created_at = new DateTime($searched_ticket['created_at']);
-                                                    $now = new DateTime();
-                                                    $age = $now->diff($created_at);
-                                                    if ($age->d > 0) {
-                                                        $age_text = $age->d . 'd';
-                                                    } elseif ($age->h > 0) {
-                                                        $age_text = $age->h . 'h';
-                                                    } else {
-                                                        $age_text = $age->i . 'm';
-                                                    }
-                                                    ?>
-                                                    <span class="ticket-age <?php echo ($age->d > 1) ? 'age-warning' : ''; ?>">
-                                                <?php echo $age_text; ?>
-                                                    </span>
+                                                    $created_at = new DateTime($ticket['created_at']);
+                                                    $closed_at = !empty($ticket['closed_at']) ? new DateTime($ticket['closed_at']) : new DateTime();
+                                                    $interval = $created_at->diff($closed_at);
+                                                    $age_text = sprintf('%dd %dh %dm', $interval->d, $interval->h, $interval->i);
+                                                ?>
+                                                <span class="ticket-age <?php echo ($interval->d > 1) ? 'age-warning' : ''; ?>">
+                                                    <?php echo $age_text; ?>
+                                                </span>
                                             </td>
                                             <td class="action-buttons">
                                                 <?php if ($searched_ticket['status'] == 'Open' || $searched_ticket['status'] == 'On Progress - Customer Care'): ?>
-                                                    <button onclick="solveTicket(<?php echo $searched_ticket['id']; ?>)" class="btn-action btn-solve" title="Selesaikan Ticket">✓ Solve</button>
-                                                    <button onclick="escalateTicket(<?php echo $searched_ticket['id']; ?>)" class="btn-action btn-escalate" title="Escalate ke BOR">↗ BOR</button>
+                                                    <button onclick="solveTicket(<?php echo $searched_ticket['id']; ?>)" class="btn-action btn-solve" title="Selesaikan Ticket">Solve Tiket</button>
+                                                    <button onclick="escalateTicket(<?php echo $searched_ticket['id']; ?>)" class="btn-action btn-escalate" title="Escalate ke BOR">Escalate ke BOR</button>
                                                 <?php endif; ?>
-                                                <a href="view_ticket.php?id=<?php echo $searched_ticket['id']; ?>" class="btn-action btn-view" title="Lihat Detail">👁 View</a>
+                                                <a href="view_ticket.php?id=<?php echo $searched_ticket['id']; ?>" class="btn-action btn-view" title="Lihat Detail">View Tiket</a>
                                             </td>
                                         </tr>
                                     <?php endif; ?>
