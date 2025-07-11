@@ -293,13 +293,13 @@ if (isset($_GET['status'])) {
                                                     </button>
                                                     <a href="view_work_report.php?wo_id=<?php echo $wo['id']; ?>" 
                                                        class="btn-dispatch-action btn-report" title="View Tech Report">
-                                                         Report
+                                                         View Report IKR
                                                     </a>
 
                                                 <?php elseif ($wo['wo_status'] == 'Closed by BOR'): ?>
                                                     <a href="view_work_report.php?wo_id=<?php echo $wo['id']; ?>" 
                                                        class="btn-dispatch-action btn-report" title="View Tech Report">
-                                                        Report
+                                                        View Report IKR
                                                     </a>
 
                                                 <?php elseif ($wo['wo_status'] == 'Waiting For BOR Review'): ?>
