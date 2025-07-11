@@ -129,28 +129,21 @@ if (isset($_GET['status'])) {
         </div>
 
         <div class="dashboard-row" style="display: flex; gap: 24px; align-items: stretch;">
-            <section class="card" style="flex: 1;">
-                <h3>Work Order Flow Control</h3>
-                
-                <div class="quick-actions">
-                    <button onclick="showAllWO()" class="btn-quick-action btn-primary">
-                        All Work Orders
-                    </button>
-                    <button onclick="showNewFromBOR()" class="btn-quick-action btn-warning">
-                        New from BOR
-                    </button>
-                    <button onclick="showWithAdminIKR()" class="btn-quick-action btn-info">
-                        With Admin IKR
-                    </button>
-                    <button onclick="showInProgress()" class="btn-quick-action btn-success">
-                        In Progress
-                    </button>
-                    <button onclick="showNeedReview()" class="btn-quick-action btn-danger">
-                        Need Review
-                    </button>
-                </div>
-
-            </section>
+                <section class="card" style="flex: 1;">
+                    <h3>Work Order Flow Control</h3>
+                    
+                    <div class="quick-actions">
+                        <button onclick="showAllWO()" class="btn-quick-action btn-primary">
+                            All Work Orders
+                        </button>
+                        <button onclick="showInProgress()" class="btn-quick-action btn-success">
+                            In Progress
+                        </button>
+                        <button onclick="showDone()" class="btn-quick-action btn-secondary">
+                            Done
+                        </button>
+                    </div>
+                </section>
             <section class="card" style="flex: 2; display: flex; flex-direction: column;">
                 <h3>Work Orders Pipeline</h3>
                 
@@ -293,13 +286,13 @@ if (isset($_GET['status'])) {
                                                     </button>
                                                     <a href="view_work_report.php?wo_id=<?php echo $wo['id']; ?>" 
                                                        class="btn-dispatch-action btn-report" title="View Tech Report">
-                                                         Report
+                                                         View Report IKR
                                                     </a>
 
                                                 <?php elseif ($wo['wo_status'] == 'Closed by BOR'): ?>
                                                     <a href="view_work_report.php?wo_id=<?php echo $wo['id']; ?>" 
                                                        class="btn-dispatch-action btn-report" title="View Tech Report">
-                                                        Report
+                                                        View Report IKR
                                                     </a>
 
                                                 <?php elseif ($wo['wo_status'] == 'Waiting For BOR Review'): ?>
@@ -376,53 +369,48 @@ if (isset($_GET['status'])) {
 
         function showAllWO() {
             const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
-            rows.forEach(row => row.style.display = '');
-        }
-
-        function showNewFromBOR() {
-            const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
             rows.forEach(row => {
-                if (row.dataset.status === 'Sent to Dispatch') {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
+                row.style.display = '';
             });
         }
 
-        function showWithAdminIKR() {
-            const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
-            rows.forEach(row => {
-                if (row.dataset.status === 'received-by-admin-ikr' || row.dataset.status === 'scheduled-by-admin-ikr') {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
-                }
-            });
-        }
-
+       
         function showInProgress() {
             const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
             rows.forEach(row => {
-                if (row.dataset.status === 'in-progress') {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
+                const statusCell = row.querySelector('td:nth-child(3)'); // kolom status
+                if (statusCell) {
+                    const statusText = statusCell.textContent.trim().toLowerCase();
+                    // Filter untuk status yang masih in progress
+                    if (statusText.includes('in progress') || 
+                        statusText.includes('scheduled') || 
+                        statusText.includes('received by admin')) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
                 }
             });
-        }
+}
 
-        function showNeedReview() {
+        function showDone() {
             const rows = document.querySelectorAll('#dispatchWorkOrderTable tbody tr');
             rows.forEach(row => {
-                if (row.dataset.status === 'completed-by-technician') {
-                    row.style.display = '';
-                } else {
-                    row.style.display = 'none';
+                const statusCell = row.querySelector('td:nth-child(3)'); // kolom status
+                if (statusCell) {
+                    const statusText = statusCell.textContent.trim().toLowerCase();
+                    // Filter untuk status yang sudah selesai
+                    if (statusText.includes('closed') || 
+                        statusText.includes('completed') || 
+                        statusText.includes('solved')) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
                 }
             });
         }
-        
+                
         document.addEventListener('DOMContentLoaded', function() {
             const tbody = document.querySelector('#dispatchWorkOrderTable tbody');
             if (!tbody) return;
