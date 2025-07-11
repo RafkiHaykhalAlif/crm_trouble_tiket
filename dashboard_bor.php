@@ -115,7 +115,7 @@ if (isset($_GET['status'])) {
         <div class="stats-grid">
             <div class="stat-card stat-review">
                 <div class="stat-number"><?php echo $stats['waiting_review']; ?></div>
-                <div class="stat-label">Butuh Review</div>
+                <div class="stat-label">Close Tiket</div>
             </div>
             <div class="stat-card stat-progress">
                 <div class="stat-number"><?php echo $stats['in_progress']; ?></div>
@@ -142,7 +142,7 @@ if (isset($_GET['status'])) {
                             Lihat Semua Ticket
                         </button>
                         <button id="showReviewBtn" class="btn-quick-action btn-warning">
-                            Butuh Review (<?php echo $stats['waiting_review']; ?>)
+                            Close Tiket (<?php echo $stats['waiting_review']; ?>)
                         </button>
                         <button id="showProgressBtn" class="btn-quick-action btn-info">
                             Ticket On Progress
@@ -257,7 +257,7 @@ if (isset($_GET['status'])) {
                                                     <?php if ($ticket['status'] == 'On Progress - BOR'): ?>
                                                         <button onclick="resolveTicket(<?php echo $ticket['id']; ?>)" 
                                                                 class="btn-bor-action btn-resolve" title="Selesaikan Ticket">
-                                                            Resolve
+                                                            Resolve Tiket
                                                         </button>
                                                         <button onclick="dispatchTicket(<?php echo $ticket['id']; ?>)" 
                                                                 class="btn-bor-action btn-dispatch" title="Kirim ke Dispatch">
@@ -288,9 +288,7 @@ if (isset($_GET['status'])) {
                                                     <?php elseif ($ticket['status'] == 'Waiting for Dispatch'): ?>
                                                         <span class="text-info">Menunggu teknisi...</span>
                                                     
-                                                    <?php elseif ($ticket['status'] == 'Closed - Solved'): ?>
-                                                        <span class="text-success">Selesai</span>
-                                                        <?php if (!empty($ticket['wo_id'])): ?>
+                                                    <?php elseif ($ticket['status'] == 'Closed - Solved'): ?>                                                        <?php if (!empty($ticket['wo_id'])): ?>
                                                             <a href="view_work_report.php?wo_id=<?php echo $ticket['wo_id']; ?>" 
                                                                class="btn-bor-action btn-report" title="Lihat Report WO">
                                                                 View Report IKR
@@ -303,7 +301,7 @@ if (isset($_GET['status'])) {
                                                     
                                                     <a href="view_ticket.php?id=<?php echo $ticket['id']; ?>" 
                                                        class="btn-bor-action btn-view" title="Lihat Detail">
-                                                        Detail
+                                                        Detail Tiket
                                                     </a>
                                                 </td>
 
@@ -538,13 +536,23 @@ if (isset($_GET['status'])) {
             gap: 6px;
             flex-wrap: wrap;
             flex-direction: column;
-            align-items: flex-start;
-            max-width: 150px;
+            align-items: stretch;
+            width: 150px;
         }
 
         .bor-action-buttons .btn-bor-action {
+            display: block;
             width: 100%;
-            justify-content: center;
+            min-width: 0;
+            max-width: none;
+            padding: 7px 0;
+            text-align: center;
+            border: none;
+            cursor: pointer;
+            white-space: nowrap;
+            margin: 0;
+            border-radius: 8px;
+            box-sizing: border-box;
         }
 
         tr[data-status="waiting-for-bor-review"] {
