@@ -214,64 +214,6 @@ function formatDuration($minutes) {
                 </table>
                 <br>
 
-                <b>Pergantian Equipment:</b>
-                <ul>
-                    <?php if ($equipment_data && !empty($equipment_data['equipment_replaced'])): ?>
-                        <li>Equipment Diganti: <?php echo nl2br(htmlspecialchars($equipment_data['equipment_replaced'])); ?></li>
-                    <?php endif; ?>
-                    <?php if ($equipment_data && !empty($equipment_data['cables_replaced'])): ?>
-                        <li>Kabel Diganti: <?php echo nl2br(htmlspecialchars($equipment_data['cables_replaced'])); ?></li>
-                    <?php endif; ?>
-                    <?php if ($equipment_data && !empty($equipment_data['new_installations'])): ?>
-                        <li>Instalasi Baru: <?php echo nl2br(htmlspecialchars($equipment_data['new_installations'])); ?></li>
-                    <?php endif; ?>
-                    <?php if (!$equipment_data || (empty($equipment_data['equipment_replaced']) && empty($equipment_data['cables_replaced']) && empty($equipment_data['new_installations']))): ?>
-                        <li>Tidak ada pergantian equipment yang dilaporkan.</li>
-                    <?php endif; ?>
-                </ul>
-
-                <b>Pencabutan Equipment:</b>
-                <ul>
-                    <li>
-                        Equipment Dicabut: 
-                        <?php
-                            if ($equipment_removed && trim($equipment_removed) !== '') {
-                                echo nl2br(htmlspecialchars($equipment_removed));
-                            } else {
-                                echo '-';
-                            }
-                        ?>
-                    </li>
-                </ul>
-
-                <b>Pengukuran Teknis:</b>
-                <ul>
-                    <li>Signal Sebelum: <?php echo $wo['signal_before'] ? htmlspecialchars($wo['signal_before']) : '-'; ?></li>
-                    <li>Signal Sesudah: <?php echo $wo['signal_after'] ? htmlspecialchars($wo['signal_after']) : '-'; ?></li>
-                    <li>Speed Test Result: <?php echo $wo['speed_test_result'] ? htmlspecialchars($wo['speed_test_result']) : '-'; ?></li>
-                </ul>
-
-                <b>Material yang Digunakan:</b>
-                <?php if ($materials_data && !empty($materials_data)): ?>
-                    <table class="wo-letter-table" style="margin-top:8px;">
-                        <tr>
-                            <th>Material</th>
-                            <th>Qty</th>
-                            <th>Unit</th>
-                            <th>Catatan</th>
-                        </tr>
-                        <?php foreach ($materials_data as $material): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($material['name']); ?></td>
-                            <td><?php echo htmlspecialchars($material['quantity']); ?></td>
-                            <td><?php echo htmlspecialchars($material['unit']); ?></td>
-                            <td><?php echo htmlspecialchars($material['notes']); ?></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </table>
-                <?php else: ?>
-                    <ul><li>Tidak ada material yang dilaporkan digunakan.</li></ul>
-                <?php endif; ?>
 
                 <br>
                 <p>Demikian surat laporan ini dibuat sebagai bukti pekerjaan telah selesai dilaksanakan dengan baik.</p>

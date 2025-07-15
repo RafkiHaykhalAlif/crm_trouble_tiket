@@ -394,7 +394,7 @@ function getStatusPriority($wo) {
                                                         <a href="create_work_report.php?wo_id=<?php echo $wo['id']; ?>" 
                                                                 class="btn-vendor-action btn-complete" title="Selesaikan WO" 
                                                                 style="background-color: #dc3545;">
-                                                            Selesaikan
+                                                            Submit
                                                         </a>
                                                         <span class="text-info" style="font-size: 12px;">
                                                             Sedang Dikerjakan
